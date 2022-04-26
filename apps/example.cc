@@ -1,7 +1,8 @@
-#include "dai-pipeline-tools.h"
+#include "cr/dai-tools/PipelineBuilder.h"
+#include "cr/dai-tools/DeviceRunner.h"
 
 int main() {
-    cr::dai_pipeline_tools::AutoDeviceRunner runner;
+    cr::dai_tools::AutoDeviceRunner runner;
     runner.Run();
     return 0;
 }

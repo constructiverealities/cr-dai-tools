@@ -3,7 +3,7 @@
 #include <utility>
 
 namespace cr {
-    namespace dai_pipeline_tools {
+    namespace dai_tools {
 #ifdef DEPTHAI_HAS_TOF_NODE
         typedef dai::CameraFeatures CameraFeatures;
 #else
@@ -37,36 +37,6 @@ namespace cr {
             virtual void HandleStereo();
             virtual void Generate();
             std::shared_ptr<dai::Pipeline> Pipeline();
-        };
-
-        struct OutputPerformanceCounter {
-            int count;
-            double latency;
-        };
-        class DeviceRunner {
-        protected:
-            std::shared_ptr<dai::Pipeline> pipeline;
-            std::shared_ptr<dai::Device> device;
-            std::map<std::string, OutputPerformanceCounter> performance_counters;
-        public:
-            virtual ~DeviceRunner() = default;
-            explicit DeviceRunner(std::shared_ptr<dai::Device> device) : device(std::move(device)) {}
-            DeviceRunner() : device(std::make_unique<dai::Device>()) {}
-
-            virtual bool ShouldKeepRunning();
-            virtual void Run();
-            virtual void SetupPipeline() = 0;
-
-            virtual void OnStreamData(const std::string& stream_name, std::shared_ptr<dai::ADatatype> msg);
-            virtual void OnStreamData(const std::string& stream_name, std::shared_ptr<dai::Buffer> msg);
-            virtual void OnStreamData(const std::string& stream_name, std::shared_ptr<dai::ImgFrame> img);
-            virtual void OnStreamData(const std::string& stream_name, std::shared_ptr<dai::IMUData> img);
-            virtual void OnStreamData(const std::string& stream_name, std::shared_ptr<dai::NNData> img);
-        };
-
-        class AutoDeviceRunner : public DeviceRunner {
-        public:
-            virtual void SetupPipeline();
         };
     }
 }

@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<package format="2">
+    <maintainer email="jdavidberger@gmail.com">justin</maintainer>
+    <name>cr_dai_ros</name>
+    <version>0.0.1</version>
+    <description>Bag of tools for tof impl</description>
+    <license>MIT</license>
+    <depend>roscpp;geometry_msgs;message_runtime;sensor_msgs;std_msgs;dynamic_reconfigure</depend>
+    <buildtool_depend>catkin</buildtool_depend>
+</package>

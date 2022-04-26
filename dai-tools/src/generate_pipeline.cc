@@ -1,9 +1,9 @@
 #include <memory>
 
-#include "dai-pipeline-tools.h"
+#include "cr/dai-tools/PipelineBuilder.h"
 
 namespace cr {
-    namespace dai_pipeline_tools {
+    namespace dai_tools {
         std::shared_ptr<dai::Pipeline> GeneratePipeline(std::shared_ptr<dai::Device> &device) {
             PipelineBuilder builder(device);
             return builder.Pipeline();
@@ -19,7 +19,7 @@ namespace cr {
 
         void PipelineBuilder::HandleOV9_82(const CameraFeatures &features) {
             std::cerr << "Warning: OV9*82 camera can not reliably be differentiated between color and mono. Override `HandleOV9_82` with the correct logic for your board" << std::endl;
-            bool isColor = features.socket == dai::CameraBoardSocket::CAM_C;
+            bool isColor = features.socket != dai::CameraBoardSocket::CAM_C;
             if(isColor) {
                 HandleColor(features, dai::ColorCameraProperties::SensorResolution::THE_720_P);
             } else {

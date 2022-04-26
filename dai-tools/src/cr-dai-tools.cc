@@ -1,14 +1,22 @@
-#include "dai-pipeline-tools.h"
+#include "cr/dai-tools/DeviceRunner.h"
+#include "cr/dai-tools/PipelineBuilder.h"
+
+#include <map>
+#include <string>
+#include <memory>
+#include <depthai/device/DataQueue.hpp>
+
+#include <depthai/pipeline/nodes.hpp>
+#include <depthai/pipeline/Pipeline.hpp>
+#include <depthai/pipeline/datatype/NNData.hpp>
+#include <depthai/pipeline/datatype/IMUData.hpp>
 #include <depthai/utility/Clock.hpp>
 
 namespace cr {
-    namespace dai_pipeline_tools {
+    namespace dai_tools {
 
         void DeviceRunner::Run() {
-            if(!pipeline)
-                SetupPipeline();
-
-            device->startPipeline(*pipeline);
+            device->startPipeline(*Pipeline());
 
             std::map<std::string, std::shared_ptr<dai::DataOutputQueue>> outputQueues;
             for(auto& n : device->getOutputQueueNames()) {
@@ -77,6 +85,12 @@ namespace cr {
 
         void DeviceRunner::OnStreamData(const std::string &stream_name, std::shared_ptr<dai::NNData> img) {
             performance_counters[stream_name].latency += ms_since(img->getTimestamp());
+        }
+
+        std::shared_ptr<dai::Pipeline> DeviceRunner::Pipeline() {
+            if(!pipeline)
+                SetupPipeline();
+            return pipeline;
         }
 
     }
