@@ -1,0 +1,1 @@
+This library is a set of tools to help create DepthAI pipelines and run depthai devices in a standard way.
