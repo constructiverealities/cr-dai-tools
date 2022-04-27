@@ -37,26 +37,32 @@ namespace cr {
             std::vector<float> distCoeffs;
             std::vector<double> flatIntrinsics, distCoeffsDouble;
             int defWidth, defHeight;
-            sensor_msgs::CameraInfo cameraData;
-            std::tie(std::ignore, defWidth, defHeight) = calibHandler.getDefaultIntrinsics(cameraId);
+            sensor_msgs::CameraInfo cameraData = {};
 
-            if(width == -1) {
-                cameraData.width = static_cast<uint32_t>(defWidth);
-            } else {
-                cameraData.width = static_cast<uint32_t>(width);
-            }
+            try {
+                std::tie(std::ignore, defWidth, defHeight) = calibHandler.getDefaultIntrinsics(cameraId);
 
-            if(height == -1) {
-                cameraData.height = static_cast<uint32_t>(defHeight);
-            } else {
-                cameraData.height = static_cast<uint32_t>(height);
-            }
+                if(width == -1) {
+                    cameraData.width = static_cast<uint32_t>(defWidth);
+                } else {
+                    cameraData.width = static_cast<uint32_t>(width);
+                }
 
-            camIntrinsics = calibHandler.getCameraIntrinsics(cameraId, cameraData.width, cameraData.height, topLeftPixelId, bottomRightPixelId);
+                if(height == -1) {
+                    cameraData.height = static_cast<uint32_t>(defHeight);
+                } else {
+                    cameraData.height = static_cast<uint32_t>(height);
+                }
 
-            flatIntrinsics.resize(9);
-            for(int i = 0; i < 3; i++) {
-                std::copy(camIntrinsics[i].begin(), camIntrinsics[i].end(), flatIntrinsics.begin() + 3 * i);
+                camIntrinsics = calibHandler.getCameraIntrinsics(cameraId, cameraData.width, cameraData.height, topLeftPixelId, bottomRightPixelId);
+
+                flatIntrinsics.resize(9);
+                for(int i = 0; i < 3; i++) {
+                    std::copy(camIntrinsics[i].begin(), camIntrinsics[i].end(), flatIntrinsics.begin() + 3 * i);
+                }
+            } catch(std::exception& exception) {
+                ROS_WARN("Failed to get cameraInfo for socket %d. Error: %s", cameraId, exception.what());
+                return cameraData;
             }
 
             auto& intrinsics = cameraData.K;
