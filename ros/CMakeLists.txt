@@ -40,8 +40,12 @@ if(catkin_FOUND)
     message(${cr_dai_ros_EXPORTED_TARGETS})
     add_dependencies(cr-dai-rosnode-lib ${cr_dai_ros_EXPORTED_TARGETS})
 
-    add_executable(cr-dai-rosnode apps/autonode.cc)
-    target_link_libraries(cr-dai-rosnode cr-dai-rosnode-lib cr-dai-tools)
+    add_executable(autonode apps/autonode.cc)
+    target_link_libraries(autonode cr-dai-rosnode-lib cr-dai-tools)
+
+    install(TARGETS autonode
+            DESTINATION bin)
+
 else()
     message("Not building ROS tools...")
 endif()
