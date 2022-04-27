@@ -128,11 +128,7 @@ namespace cr {
             auto calibrationData = device->readCalibration();
             auto eeprom = calibrationData.getEepromData();
 
-#ifdef DEPTHAI_HAS_TOF_NODE
             auto features = device->getConnectedCameraFeatures();
-#else
-            auto features = device->getConnectedCameraProperties();
-#endif
             if(eeprom.stereoRectificationData.leftCameraSocket != dai::CameraBoardSocket::AUTO &&
                eeprom.stereoRectificationData.rightCameraSocket != dai::CameraBoardSocket::AUTO) {
                 bool hasRight = false, hasLeft = false;
@@ -147,9 +143,7 @@ namespace cr {
 
             auto factory = std::map<std::string, std::function<void(const CameraFeatures &features)>>(
             {
-#ifdef DEPTHAI_HAS_TOF_NODE
                     {"MTP006", [this](const CameraFeatures &features){this->HandleToF(features);}},
-#endif
                     {"OV9*82", [this](const CameraFeatures &features){this->HandleOV9_82(features);}},
                     {"IMX378", [this](const CameraFeatures &features){this->HandleIMX378(features);}},
             });

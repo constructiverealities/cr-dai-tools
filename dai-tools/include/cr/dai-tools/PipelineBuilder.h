@@ -4,11 +4,7 @@
 
 namespace cr {
     namespace dai_tools {
-#ifdef DEPTHAI_HAS_TOF_NODE
         typedef dai::CameraFeatures CameraFeatures;
-#else
-        typedef dai::CameraProperties CameraFeatures;
-#endif
 
         std::shared_ptr<dai::Pipeline> GeneratePipeline(std::shared_ptr<dai::Device> &device);
 
