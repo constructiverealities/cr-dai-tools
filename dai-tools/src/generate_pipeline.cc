@@ -234,6 +234,10 @@ namespace cr {
         }
         DeviceMetaInfo::DeviceMetaInfo(const std::shared_ptr<dai::Device> &device) : device(device) {
             Name = "dai_" + device->getMxId();
+            auto env_name = getenv("DEPTHAI_DEVICE_NAME");
+            if(env_name && env_name[0]) {
+                Name = env_name;
+            }
             Load();
         }
 
