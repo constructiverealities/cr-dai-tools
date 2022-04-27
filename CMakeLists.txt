@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(cr-dai-tools)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 include(CheckCXXSourceCompiles)
 
 #set(SHARED_FLAGS "-fPIC -Wall -Wno-unused-variable -Wno-switch -Wno-parentheses -Wno-missing-braces -Werror=return-type -Werror=vla -fno-math-errno -Werror=pointer-arith")

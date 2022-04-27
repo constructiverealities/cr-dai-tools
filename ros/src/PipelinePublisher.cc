@@ -61,7 +61,7 @@ namespace cr {
                     std::copy(camIntrinsics[i].begin(), camIntrinsics[i].end(), flatIntrinsics.begin() + 3 * i);
                 }
             } catch(std::exception& exception) {
-                ROS_WARN("Failed to get cameraInfo for socket %d. Error: %s", cameraId, exception.what());
+                ROS_WARN("Failed to get cameraInfo for socket %d. Error: %s", (int)cameraId, exception.what());
                 return cameraData;
             }
 
@@ -132,15 +132,12 @@ namespace cr {
         };
 
         PipelinePublisher::PipelinePublisher(::ros::NodeHandle& pnh,
-                                             dai::Device& device,
-                                             dai::Pipeline& pipeline,
-                                             const std::string&  frame_prefix)
-                : _pnh(pnh), _device(device), _frame_prefix(frame_prefix) {
-            _calibrationHandler = device.readCalibration();
+                                             std::shared_ptr<dai::Device> device,
+                                             dai::Pipeline& pipeline)
+                : _pnh(pnh), _device(*device), metaInfo(device) {
+            _calibrationHandler = device->readCalibration();
             BuildPublisherFromPipeline(pipeline);
         }
-        PipelinePublisher::PipelinePublisher(::ros::NodeHandle& pnh, dai::Device& device, dai::Pipeline& pipeline)
-                : PipelinePublisher(pnh, device, pipeline, "dai_" + device.getMxId()) {}
 
         void PipelinePublisher::setupCameraControlServer(std::shared_ptr<dai::node::StereoDepth> stereo, const std::string& prefix) {
             auto configQueue = _device.getInputQueue(prefix + "Config");

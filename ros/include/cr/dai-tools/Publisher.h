@@ -46,7 +46,7 @@ namespace cr {
                 auto now = dai::Clock::now();
                 perf_count++;
                 if((now - perf_start).count() > 3e9) {
-                    ROS_WARN("%10s FPS \t%7.2f latency \t%7.2fms",
+                    ROS_INFO("%10s FPS \t%7.2f latency \t%7.2fms",
                              Name().c_str(),
                              (perf_count * 1000. / (double) std::chrono::duration_cast<std::chrono::milliseconds>(now - perf_start).count()),
                              (perf_latency / perf_count));

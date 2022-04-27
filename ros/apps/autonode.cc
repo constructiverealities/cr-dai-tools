@@ -25,11 +25,10 @@ int main(int argc, char** argv) {
     fprintf(stderr, "Usb speed is %d\n", (int)d->getUsbSpeed());
 
     auto pipeline = cr::dai_tools::GeneratePipeline(d);
-    std::string tfPrefix = "dai_" + d->getMxId();
-    std::string topicPrefix = tfPrefix;
-
-    ros::NodeHandle n(topicPrefix);
-    auto publisher = cr::dai_rosnode::PipelinePublisher(n, *d, *pipeline, tfPrefix);
+    cr::dai_tools::DeviceMetaInfo metaInfo(d);
+    std::string tfPrefix = metaInfo.Name;
+    ros::NodeHandle n(tfPrefix);
+    auto publisher = cr::dai_rosnode::PipelinePublisher(n, d, *pipeline);
 
     ros::spin();
 

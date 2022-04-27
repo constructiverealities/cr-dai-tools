@@ -2,6 +2,7 @@
 #include "depthai/pipeline/nodes.hpp"
 #include "cr/dai-tools/NodeWalker.h"
 #include "ros/ros.h"
+#include "cr/dai-tools/PipelineBuilder.h"
 
 namespace cr {
     namespace dai_rosnode {
@@ -13,6 +14,8 @@ namespace cr {
             ::ros::NodeHandle& _pnh;
             dai::Device& _device;
             std::string _frame_prefix;
+
+            cr::dai_tools::DeviceMetaInfo metaInfo;
 
             std::map<dai::CameraBoardSocket, ::ros::NodeHandle> _nodeHandles;
             ::ros::NodeHandle& getNodeHandle(dai::CameraBoardSocket socket);
@@ -54,8 +57,7 @@ namespace cr {
 
         public:
             void BuildPublisherFromPipeline(dai::Pipeline& pipeline);
-            PipelinePublisher(::ros::NodeHandle& pnh, dai::Device& device, dai::Pipeline& pipeline);
-            PipelinePublisher(::ros::NodeHandle& pnh, dai::Device& device, dai::Pipeline& pipeline, const std::string& frame_prefix);
+            PipelinePublisher(::ros::NodeHandle& pnh, std::shared_ptr<dai::Device> device, dai::Pipeline& pipeline);
 
             void setupDeviceServer();
         };
