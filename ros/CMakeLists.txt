@@ -1,5 +1,9 @@
 project(cr_dai_ros)
 
+if(NOT TARGET cr-dai-tools)
+    add_subdirectory(../dai-tools dai-tools)
+endif()
+
 find_package(catkin REQUIRED COMPONENTS roscpp rosbag sensor_msgs cv_bridge tf camera_info_manager image_transport tf2 catkin
         dynamic_reconfigure geometry_msgs)
 
