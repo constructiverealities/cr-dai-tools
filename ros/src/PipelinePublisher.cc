@@ -487,6 +487,10 @@ namespace cr {
             if(_nodeHandles.find(socket) == _nodeHandles.end()) {
                 auto ns = default_frame_mapping()[socket];
                 _nodeHandles[socket] = ::ros::NodeHandle(_pnh, ns);
+
+                auto cname = metaInfo.Name + "_" + ns;
+                auto  cameraInfoManager = std::make_shared<DepthaiCameraInfoManager>(_device, socket, _nodeHandles[socket], cname);
+                keep_alive.push_back(cameraInfoManager);
             }
             return _nodeHandles[socket];
         }

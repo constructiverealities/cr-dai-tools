@@ -12,8 +12,8 @@ static std::shared_ptr<dai::Device> get_device() {
 }
 
 int main(int argc, char** argv) {
-    ros::init(argc, argv, "depthai_device", ros::init_options::AnonymousName);
     auto d = get_device();
+    ros::init(argc, argv, "dai_" + d->getMxId());
     if(!d) {
         return -1;
     }

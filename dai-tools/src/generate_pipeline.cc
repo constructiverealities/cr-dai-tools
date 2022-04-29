@@ -20,7 +20,7 @@ namespace cr {
         void PipelineBuilder::HandleIMX378(const CameraFeatures &features) {
             auto sensorInfo = metaInfo.SensorInfo.find(features.socket);
             if(sensorInfo == metaInfo.SensorInfo.end()) {
-                metaInfo.SensorInfo[features.socket] = SensorMetaInfo(true, 30, dai::CameraProperties::SensorResolution::THE_1080_P);
+                metaInfo.SensorInfo[features.socket] = SensorMetaInfo("IMX378", dai::CameraSensorType::COLOR, 30, dai::CameraProperties::SensorResolution::THE_1080_P);
             }
             HandleColor(features);
         }
@@ -33,9 +33,9 @@ namespace cr {
                         << "Warning: OV9*82 camera can not reliably be differentiated between color and mono. Override `HandleOV9_82` with the correct logic for your board"
                         << std::endl;
 
-                metaInfo.SensorInfo[features.socket] = SensorMetaInfo(isColor, 30, dai::CameraProperties::SensorResolution::THE_720_P);
+                metaInfo.SensorInfo[features.socket] = SensorMetaInfo("OV9*82", isColor ? dai::CameraSensorType::COLOR : dai::CameraSensorType::MONO, 30, dai::CameraProperties::SensorResolution::THE_720_P);
             } else {
-                isColor = sensorInfo->second.IsColor;
+                isColor = sensorInfo->second.SensorType == dai::CameraSensorType::COLOR;
             }
 
             if(isColor) {
@@ -51,27 +51,16 @@ namespace cr {
             auto rgbPicture = pipeline->create<dai::node::ColorCamera>();
             rgbPicture->setFps(sensorInfo.FPS);
             rgbPicture->initialControl.setManualFocus(135);
-            rgbPicture->initialControl.setManualExposure(10000, 1597);
+            //rgbPicture->initialControl.setManualExposure(10000, 1597);
             rgbPicture->setBoardSocket(features.socket);
             rgbPicture->setResolution(sensorInfo.ColorResolution());
 
             rgbPicture->setInterleaved(false);
 
             auto xoutVideo = pipeline->create<dai::node::XLinkOut>();
-            auto name = get_unique_name("rgb");
-            {
-                xoutVideo->setStreamName(name);
-                rgbPicture->isp.link(xoutVideo->input);
-            }
-        }
-
-        std::string PipelineBuilder::get_unique_name(const std::string &prefix) {
-            int cnt = used_names[prefix];
-            used_names[prefix]++;
-            if(cnt == 0) {
-                return prefix;
-            }
-            return prefix + std::to_string(cnt);
+            auto name = "rgb";
+            xoutVideo->setStreamName(name);
+            rgbPicture->isp.link(xoutVideo->input);
         }
 
         void PipelineBuilder::HandleMono(const CameraFeatures &features) {
@@ -81,7 +70,7 @@ namespace cr {
             mono->setBoardSocket(features.socket);
             mono->setFps(sensorInfo.FPS);
             mono->setResolution(sensorInfo.MonoResolution());
-            mono->initialControl.setManualExposure(1000, 1599);
+            //mono->initialControl.setManualExposure(1000, 1599);
             auto xoutVideo = pipeline->create<dai::node::XLinkOut>();
 
             std::string name = "mono";
@@ -89,7 +78,7 @@ namespace cr {
                 mono->out.link(features.socket == dai::CameraBoardSocket::LEFT ? stereo_depth_node->left : stereo_depth_node->right);
                 name = features.socket == dai::CameraBoardSocket::LEFT ? "left" : "right";
             }
-            xoutVideo->setStreamName(get_unique_name(name));
+            xoutVideo->setStreamName(name);
             mono->out.link(xoutVideo->input);
         }
 
@@ -97,6 +86,7 @@ namespace cr {
             auto xinPicture = pipeline->create<dai::node::Camera>();
             xinPicture->setBoardSocket(features.socket);
             auto tof = pipeline->create<dai::node::ToF>();
+            metaInfo.SensorInfo[features.socket] = SensorMetaInfo("MTP006", dai::CameraSensorType::TOF, 30, dai::CameraProperties::SensorResolution::THE_400_P);
 
             std::list<std::pair<std::string, typeof(tof->out) *>> outs = {
                     {"depth",     &tof->out},
@@ -170,6 +160,7 @@ namespace cr {
 
             for(auto& feature : features) {
                 auto& fn = factory[feature.sensorName];
+
                 if(feature.socket == dai::CameraBoardSocket::RIGHT && feature.sensorName == "IMX378") {
                     // Right and left share an i2c bus and IMX378's don't have an option to have different device IDs. So
                     // we just assume they are in the left socket always for now.
@@ -228,7 +219,7 @@ namespace cr {
             if(home && home[0]) return home;
 
             home = getenv("HOME");
-            if(home && home[0]) return std::string(home) + "/.config";
+            if(home && home[0]) return std::string(home) + "/.local/share";
 
             return "./";
         }
@@ -252,6 +243,7 @@ namespace cr {
             YAML::Emitter out;
             out << YAML::BeginMap;
             out << YAML::Key << "Name" << YAML::Value << Name;
+            out << YAML::Key << "Id" << YAML::Value << device->getMxId();
             out << YAML::Key << "SensorInfos" << YAML::Value;
 
             {
@@ -259,8 +251,9 @@ namespace cr {
                 for (auto &infos: this->SensorInfo) {
                     out << YAML::BeginMap;
                     out << YAML::Key << "Socket" << YAML::Value << (char) ('A' + (int) infos.first);
+                    out << YAML::Key << "SensorName" << YAML::Value << infos.second.SensorName;
                     out << YAML::Key << "FPS" << YAML::Value << infos.second.FPS;
-                    out << YAML::Key << "IsColor" << YAML::Value << infos.second.IsColor;
+                    out << YAML::Key << "SensorType" << YAML::Value << (int)infos.second.SensorType;
                     out << YAML::Key << "Resolution" << YAML::Value << (int) infos.second.Resolution;
                     out << YAML::Key << "Outputs" << YAML::Value << YAML::BeginSeq;
                     for (auto &o: infos.second.Outputs) {
@@ -285,17 +278,23 @@ namespace cr {
             Name = yaml["Name"].as<std::string>(Name);
             for(auto sensorMetadataNode : yaml["SensorInfos"]) {
                 int socket = sensorMetadataNode["Socket"].as<char>(0) - 'A';
-                auto newInfo = SensorMetaInfo(sensorMetadataNode["IsColor"].as<bool>(0),
-                                              sensorMetadataNode["FPS"].as<double>(30),
-                                              (dai::CameraProperties::SensorResolution)sensorMetadataNode["Resolution"].as<int>(2));
-                if(socket >= 0) {
-                    SensorInfo[(dai::CameraBoardSocket)socket] = newInfo;
+                try {
+                    auto newInfo = SensorMetaInfo(sensorMetadataNode["SensorName"].as<std::string>(""),
+                                                  (dai::CameraSensorType) sensorMetadataNode["SensorType"].as<int>(0),
+                                                  sensorMetadataNode["FPS"].as<double>(30),
+                                                  (dai::CameraProperties::SensorResolution) sensorMetadataNode["Resolution"].as<int>(
+                                                          2));
+                    if (socket >= 0) {
+                        SensorInfo[(dai::CameraBoardSocket) socket] = newInfo;
+                    }
+                } catch(std::exception& e) {
+                    fprintf(stderr, "Warning: Error reading device meta file %s", e.what());
                 }
             }
         }
 
-        SensorMetaInfo::SensorMetaInfo(bool isColor, double fps, dai::CameraProperties::SensorResolution resolution)
-                : IsColor(isColor), FPS(fps), Resolution(resolution) {}
+        SensorMetaInfo::SensorMetaInfo(const std::string& name, dai::CameraSensorType sensorType, double fps, dai::CameraProperties::SensorResolution resolution)
+                : SensorName(name), SensorType(sensorType), FPS(fps), Resolution(resolution) {}
 
         dai::MonoCameraProperties::SensorResolution SensorMetaInfo::MonoResolution() {
             switch(Resolution) {

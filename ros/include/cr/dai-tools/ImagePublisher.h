@@ -16,6 +16,7 @@
 #include "sensor_msgs/Image.h"
 
 #include "cr/dai-tools/Publisher.h"
+#include "cr/dai-tools/DepthAICameraInfoManager.hpp"
 
 namespace cr {
     namespace dai_rosnode {

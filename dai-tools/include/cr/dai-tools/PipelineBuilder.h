@@ -11,13 +11,14 @@ namespace cr {
         std::shared_ptr<dai::Pipeline> GeneratePipeline(std::shared_ptr<dai::Device> &device);
 
         struct SensorMetaInfo {
-            bool IsColor;
+            std::string SensorName;
+            dai::CameraSensorType SensorType;
             double FPS = 30;
             dai::CameraProperties::SensorResolution Resolution = dai::CameraProperties::SensorResolution::THE_720_P;
             std::vector<std::string> Outputs;
 
             SensorMetaInfo() {}
-            SensorMetaInfo(bool isColor, double fps, dai::CameraProperties::SensorResolution resolution);
+            SensorMetaInfo(const std::string& name, dai::CameraSensorType sensorType, double fps, dai::CameraProperties::SensorResolution resolution);
 
             dai::MonoCameraProperties::SensorResolution MonoResolution();
 
@@ -43,12 +44,10 @@ namespace cr {
         protected:
             std::shared_ptr<dai::Pipeline> pipeline;
             std::shared_ptr<dai::Device> device;
-            std::map<std::string, int> used_names;
             std::shared_ptr<dai::node::StereoDepth> stereo_depth_node;
 
             DeviceMetaInfo metaInfo;
 
-            std::string get_unique_name(const std::string& prefix);
         public:
             explicit PipelineBuilder(const std::shared_ptr<dai::Device>& device) : device(device), metaInfo(device) {}
             virtual ~PipelineBuilder() = default;

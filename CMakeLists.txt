@@ -9,6 +9,7 @@ include(CheckCXXSourceCompiles)
 #SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${SHARED_FLAGS} -std=gnu99 -Werror=incompatible-pointer-types -Werror=implicit-function-declaration ")
 #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SHARED_FLAGS} -std=c++14")
 
+find_package(depthai REQUIRED)
 add_subdirectory(dai-tools)
 add_subdirectory(ros)
 

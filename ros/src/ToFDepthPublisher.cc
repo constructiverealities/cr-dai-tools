@@ -3,7 +3,7 @@
 
 void cr::dai_rosnode::ToFDepthPublisher::publishCalibrationBlob(const dai::ImgFrame &frame) {
     if(!calibrationBlobPublisher) {
-        calibrationBlobPublisher = _nh.advertise<std_msgs::UInt8MultiArray>(Name() + "/calibration_blob", 1, true);
+        calibrationBlobPublisher = _nh.advertise<std_msgs::UInt8MultiArray>(Name() + "/calibration_blob", 4, true);
     }
     std_msgs::UInt8MultiArray blob;
     blob.data = frame.getData();
