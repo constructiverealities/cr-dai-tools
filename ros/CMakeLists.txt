@@ -1,6 +1,8 @@
 project(cr_dai_ros)
 
+find_package(depthai REQUIRED)
 if(NOT TARGET cr-dai-tools)
+    message("Building as catkin workspace; adding tools dir")
     add_subdirectory(../dai-tools dai-tools)
 endif()
 
