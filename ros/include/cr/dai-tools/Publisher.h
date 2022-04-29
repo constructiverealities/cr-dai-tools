@@ -31,7 +31,12 @@ namespace cr {
 
             std::shared_ptr<dai::node::XLinkOut> xLinkOut;
 
-            virtual std::string Name() const { return xLinkOut->getStreamName(); }
+            virtual std::string Name() const {
+                auto name = xLinkOut->getStreamName();
+                if(name.length() && name.back() >= '0' && name.back() <= '9')
+                    name.pop_back();
+                return name;
+            }
             virtual bool hasDataListeners() const {
                 return publisher.getNumSubscribers() > 0;
             }

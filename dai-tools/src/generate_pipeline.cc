@@ -59,7 +59,7 @@ namespace cr {
 
             auto xoutVideo = pipeline->create<dai::node::XLinkOut>();
             auto name = "rgb";
-            xoutVideo->setStreamName(name);
+            xoutVideo->setStreamName(name + std::to_string((int)features.socket));
             rgbPicture->isp.link(xoutVideo->input);
         }
 
@@ -78,7 +78,7 @@ namespace cr {
                 mono->out.link(features.socket == dai::CameraBoardSocket::LEFT ? stereo_depth_node->left : stereo_depth_node->right);
                 name = features.socket == dai::CameraBoardSocket::LEFT ? "left" : "right";
             }
-            xoutVideo->setStreamName(name);
+            xoutVideo->setStreamName(name + std::to_string((int)features.socket));
             mono->out.link(xoutVideo->input);
         }
 
@@ -111,7 +111,7 @@ namespace cr {
 
             for (auto &kv : outs) {
                 auto xoutVideo = pipeline->create<dai::node::XLinkOut>();
-                xoutVideo->setStreamName(kv.first);
+                xoutVideo->setStreamName(kv.first + std::to_string((int)features.socket));
                 kv.second->link(xoutVideo->input);
             }
         }
