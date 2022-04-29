@@ -160,7 +160,7 @@ namespace cr {
 
             for(auto& feature : features) {
                 auto& fn = factory[feature.sensorName];
-
+                std::cerr << "Found sensor " << feature.sensorName << " on socket " << (int) feature.socket << std::endl;
                 if(feature.socket == dai::CameraBoardSocket::RIGHT && feature.sensorName == "IMX378") {
                     // Right and left share an i2c bus and IMX378's don't have an option to have different device IDs. So
                     // we just assume they are in the left socket always for now.

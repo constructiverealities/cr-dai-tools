@@ -24,13 +24,18 @@ int main(int argc, char** argv) {
     }
     fprintf(stderr, "Usb speed is %d\n", (int)d->getUsbSpeed());
 
+    ROS_INFO("Creating Pipeline...");
     auto pipeline = cr::dai_tools::GeneratePipeline(d);
     cr::dai_tools::DeviceMetaInfo metaInfo(d);
     std::string tfPrefix = metaInfo.Name;
     ros::NodeHandle n(tfPrefix);
+
+    ROS_INFO("Creating Publisher...");
     auto publisher = cr::dai_rosnode::PipelinePublisher(n, d, *pipeline);
 
+    ROS_INFO("Setup done, wait...");
     ros::spin();
 
+    ROS_INFO("Exiting...");
     return 0;
 }

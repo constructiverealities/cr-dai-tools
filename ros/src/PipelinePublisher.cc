@@ -210,6 +210,7 @@ namespace cr {
 
         void PipelinePublisher::setupCameraControlServer(dai::CameraBoardSocket socket, const std::string& prefix) {
             auto name = prefix + std::to_string((int)socket);
+            ROS_INFO("Setting up camera control server for %s", name.c_str());
             auto configQueue = _device.getInputQueue(name + "_inputControl");
             auto n = getNodeHandle(socket);
             auto server = std::make_shared<dynamic_reconfigure::Server<cr_dai_ros::CameraControlConfig>>(n);
