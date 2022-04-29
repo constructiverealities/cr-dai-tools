@@ -135,6 +135,7 @@ namespace cr {
                                              std::shared_ptr<dai::Device> device,
                                              dai::Pipeline& pipeline)
                 : _pnh(pnh), _device(*device), metaInfo(device) {
+            std::cerr << "Reading calibration data..." << std::endl;
             _calibrationHandler = device->readCalibration();
             BuildPublisherFromPipeline(pipeline);
         }
@@ -173,7 +174,7 @@ namespace cr {
         void PipelinePublisher::BuildPublisherFromPipeline(dai::Pipeline& pipeline) {
             setupDeviceServer();
 
-            auto connections = pipeline.getConnectionMap();
+            std::cerr << "Making prepass " << _pnh.getNamespace() << std::endl;
             if(!_device.isPipelineRunning()) {
                 for(auto& node : pipeline.getAllNodes()) {
                     addConfigNodes(pipeline, node);
@@ -187,14 +188,14 @@ namespace cr {
                 ROS_WARN("Device is running already, PipelinePublisher can not add configuration servers");
             }
 
+            std::cerr << "Mapping connections..." << std::endl;
+            auto connections = pipeline.getConnectionMap();
             for(auto& connection : connections) {
                 auto node = pipeline.getNode(connection.first);
                 if(auto xlinkOut = std::dynamic_pointer_cast<dai::node::XLinkOut>(node)) {
                     for(auto& nodeConnection : connection.second) {
                         auto otherNode = pipeline.getNode(nodeConnection.outputId);
-
                         StartVisit(SetupPublishers(), xlinkOut, nodeConnection.outputName, otherNode);
-                        //mapOutputStream(pipeline, xlinkOut, nodeConnection);
                     }
                 }
             }
@@ -204,6 +205,7 @@ namespace cr {
         template<typename T> void PipelinePublisher::setupCameraControlQueue(std::shared_ptr<T> cam, const std::string& prefix) {
             auto configIn = cam->getParentPipeline().template create<dai::node::XLinkIn>();
             auto name = prefix + std::to_string((int)cam->getBoardSocket());
+            std::cerr << "Setting up camera control xlinks for " << name << std::endl;
             configIn->setStreamName(name + "_inputControl");
             configIn->out.link(cam->inputControl);
         }
@@ -262,6 +264,7 @@ namespace cr {
 
         void PipelinePublisher::addConfigNodes(dai::Pipeline& pipeline, std::shared_ptr<dai::Node> node) {
             if(auto stereo = std::dynamic_pointer_cast<dai::node::StereoDepth>(node)) {
+                std::cerr << "Setting up camera control xlinks for stereo" << std::endl;
                 auto configIn = pipeline.create<dai::node::XLinkIn>();
                 configIn->setStreamName("stereoConfig");
                 configIn->out.link(stereo->inputConfig);
@@ -460,7 +463,7 @@ namespace cr {
 
         void PipelinePublisher::setupDeviceServer() {
             auto server = std::make_shared<dynamic_reconfigure::Server<cr_dai_ros::DeviceControlConfig>>(_pnh);
-
+            std::cerr << "Setting up device server at " << _pnh.getNamespace() << std::endl;
             auto current_config = std::make_shared<cr_dai_ros::DeviceControlConfig>();
             server->getConfigDefault(*current_config);
             keep_alive.push_back(current_config);

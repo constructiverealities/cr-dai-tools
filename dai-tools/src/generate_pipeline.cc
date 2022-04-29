@@ -267,6 +267,7 @@ namespace cr {
             out << YAML::EndMap;
 
             auto fn = SaveFileName();
+            std::cerr << "Saving metadata file to " << fn << std::endl;
             std::ofstream fs(SaveFileName());
             fs << out.c_str() << std::endl;
         }
@@ -274,8 +275,9 @@ namespace cr {
             auto fn = SaveFileName();
             std::ifstream fs(fn);
             auto yaml = YAML::Load(fs);
-
             Name = yaml["Name"].as<std::string>(Name);
+            std::cerr << "Loading meta info for " << Name << " from " << fn << std::endl;
+
             for(auto sensorMetadataNode : yaml["SensorInfos"]) {
                 int socket = sensorMetadataNode["Socket"].as<char>(0) - 'A';
                 try {
