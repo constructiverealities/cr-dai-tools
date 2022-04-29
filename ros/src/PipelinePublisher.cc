@@ -180,8 +180,10 @@ namespace cr {
                     addConfigNodes(pipeline, node);
                 }
 
+                std::cerr << "Starting pipeline" << std::endl;
                 _device.startPipeline(pipeline);
 
+                std::cerr << "Doing post-startup pass" << std::endl;
                 SetupPostStart walker(this);
                 walker.VisitAll(pipeline.getAllNodes());
             } else {
