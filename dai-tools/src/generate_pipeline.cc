@@ -27,7 +27,7 @@ namespace cr {
 
         void PipelineBuilder::HandleOV9_82(const CameraFeatures &features) {
             auto sensorInfo = metaInfo.SensorInfo.find(features.socket);
-            bool isColor = features.socket != dai::CameraBoardSocket::CAM_C;
+            bool isColor = false;
             if(sensorInfo == metaInfo.SensorInfo.end()) {
                 std::cerr
                         << "Warning: OV9*82 camera can not reliably be differentiated between color and mono. Override `HandleOV9_82` with the correct logic for your board"
@@ -141,13 +141,16 @@ namespace cr {
             auto features = device->getConnectedCameraFeatures();
             if(eeprom.stereoRectificationData.leftCameraSocket != dai::CameraBoardSocket::AUTO &&
                eeprom.stereoRectificationData.rightCameraSocket != dai::CameraBoardSocket::AUTO) {
+                std::cerr << "Found stereo data " << (int)eeprom.stereoRectificationData.leftCameraSocket << " to " << (int) eeprom.stereoRectificationData.rightCameraSocket << std::endl;
                 bool hasRight = false, hasLeft = false;
                 for(auto& feature : features) {
-                    hasRight = feature.socket == dai::CameraBoardSocket::RIGHT;
-                    hasLeft = feature.socket == dai::CameraBoardSocket::LEFT;
+                    hasRight |= feature.socket == dai::CameraBoardSocket::RIGHT;
+                    hasLeft |= feature.socket == dai::CameraBoardSocket::LEFT;
                 }
                 if(hasRight && hasLeft) {
                     HandleStereo();
+                } else {
+                    std::cerr << "Could not find cameras at stereo positions" << std::endl;
                 }
             }
 
