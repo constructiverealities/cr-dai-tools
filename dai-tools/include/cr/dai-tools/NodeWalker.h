@@ -18,6 +18,7 @@ namespace cr {
                         dai::node::MonoCamera,
                         dai::node::NeuralNetwork,
                         dai::node::ObjectTracker,
+                        dai::node::StereoDepth,
                         dai::node::Script,
                         dai::node::SpatialDetectionNetwork,
                         dai::node::SpatialLocationCalculator,

@@ -76,11 +76,10 @@ namespace cr {
             if(stereo_depth_node) {
                 mono->out.link(features.socket == dai::CameraBoardSocket::LEFT ? stereo_depth_node->left : stereo_depth_node->right);
                 name = features.socket == dai::CameraBoardSocket::LEFT ? "left" : "right";
-            } else {
-                auto xoutVideo = pipeline->create<dai::node::XLinkOut>();
-                xoutVideo->setStreamName(name + std::to_string((int) features.socket));
-                mono->out.link(xoutVideo->input);
             }
+            auto xoutVideo = pipeline->create<dai::node::XLinkOut>();
+            xoutVideo->setStreamName(name + std::to_string((int) features.socket));
+            mono->out.link(xoutVideo->input);
         }
 
         void PipelineBuilder::HandleToF(const CameraFeatures &features) {

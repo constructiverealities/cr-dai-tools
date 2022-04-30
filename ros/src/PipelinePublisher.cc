@@ -187,6 +187,9 @@ namespace cr {
 
                 std::cerr << "Doing post-startup pass" << std::endl;
                 SetupPostStart walker(this);
+                for(auto& n : pipeline.getAllNodes()) {
+                    std::cerr << n->getName() << std::endl;
+                }
                 walker.VisitAll(pipeline.getAllNodes());
             } else {
                 ROS_WARN("Device is running already, PipelinePublisher can not add configuration servers");
