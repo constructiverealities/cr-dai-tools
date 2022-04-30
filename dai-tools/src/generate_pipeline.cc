@@ -125,6 +125,7 @@ namespace cr {
             stereo_depth_node->setExtendedDisparity(false);
             stereo_depth_node->setSubpixel(true);
             stereo_depth_node->initialConfig.setMedianFilter(dai::MedianFilter::KERNEL_7x7);
+            stereo_depth_node->setRuntimeModeSwitch(true);
 
             auto xout = pipeline->create<dai::node::XLinkOut>();
             xout->setStreamName("stereo_depth");
