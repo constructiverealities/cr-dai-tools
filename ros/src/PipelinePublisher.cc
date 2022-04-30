@@ -141,8 +141,10 @@ namespace cr {
         }
 
         void PipelinePublisher::setupCameraControlServer(std::shared_ptr<dai::node::StereoDepth> stereo, const std::string& prefix) {
+            ros::NodeHandle n(_pnh, "stereo");
+            std::cerr << "Setting up stereo control server for " << n.getNamespace() << std::endl;
             auto configQueue = _device.getInputQueue(prefix + "Config");
-            auto server = std::make_shared<dynamic_reconfigure::Server<cr_dai_ros::StereoDepthConfig>>(_pnh);
+            auto server = std::make_shared<dynamic_reconfigure::Server<cr_dai_ros::StereoDepthConfig>>(n);
             cr_dai_ros::StereoDepthConfig def_config = { };
             def_config.left_right_check = stereo->initialConfig.getLeftRightCheckThreshold() > 0; // No getter for this; just check threshold??
             def_config.confidence = stereo->initialConfig.getConfidenceThreshold();

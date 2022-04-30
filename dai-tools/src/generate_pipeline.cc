@@ -71,15 +71,16 @@ namespace cr {
             mono->setFps(sensorInfo.FPS);
             mono->setResolution(sensorInfo.MonoResolution());
             //mono->initialControl.setManualExposure(1000, 1599);
-            auto xoutVideo = pipeline->create<dai::node::XLinkOut>();
 
             std::string name = "mono";
             if(stereo_depth_node) {
                 mono->out.link(features.socket == dai::CameraBoardSocket::LEFT ? stereo_depth_node->left : stereo_depth_node->right);
                 name = features.socket == dai::CameraBoardSocket::LEFT ? "left" : "right";
+            } else {
+                auto xoutVideo = pipeline->create<dai::node::XLinkOut>();
+                xoutVideo->setStreamName(name + std::to_string((int) features.socket));
+                mono->out.link(xoutVideo->input);
             }
-            xoutVideo->setStreamName(name + std::to_string((int)features.socket));
-            mono->out.link(xoutVideo->input);
         }
 
         void PipelineBuilder::HandleToF(const CameraFeatures &features) {
