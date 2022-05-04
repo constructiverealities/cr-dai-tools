@@ -13,6 +13,9 @@ static std::shared_ptr<dai::Device> get_device() {
 
 int main(int argc, char** argv) {
     auto d = get_device();
+    if(!d) {
+        return -1;
+    }
     ros::init(argc, argv, "dai_" + d->getMxId());
     if(!d) {
         return -1;
