@@ -96,7 +96,7 @@ cr::dai_rosnode::ImagePublisher::ImagePublisher(std::shared_ptr<dai::DataOutputQ
                                                 std::shared_ptr<dai::node::XLinkOut> xlinkOut) :
         _cameraInfoData(cameraInfoData),
         Publisher_<dai::ImgFrame, image_transport::CameraPublisher>(daiMessageQueue, nh, queueSize, xlinkOut) {
-    ROS_INFO("Creating image publisher for ns %s", nh.getNamespace().c_str());
+    ROS_INFO("Creating image publisher for ns %s/%s", nh.getNamespace().c_str(), xLinkOut->getStreamName().c_str());
 }
 
 void cr::dai_rosnode::ImagePublisher::operator()(std::shared_ptr<dai::ImgFrame> inFrame) {

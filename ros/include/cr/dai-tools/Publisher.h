@@ -68,6 +68,7 @@ namespace cr {
                 perf_start = dai::Clock::now();
             }
             virtual void Setup() {
+                ROS_INFO("Adding callback for %s", xLinkOut->getStreamName().c_str());
                 _daiMessageQueue->addCallback([this](std::string name, std::shared_ptr<dai::ADatatype> msg) {
                     (*this)(std::dynamic_pointer_cast<T>(msg));
                 });

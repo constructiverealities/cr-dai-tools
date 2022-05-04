@@ -1,7 +1,8 @@
 version: '2'
-services:
+services:   
   autonode:
     build: .
+    image: ghcr.io/constructiverealities/cr-dai-tools:develop
     network_mode: host
     command: /opt/ros/noetic/bin/autonode
     privileged: true
@@ -13,4 +14,22 @@ services:
     environment:
       - DEPTHAI_LEVEL="debug"
     restart: on-failure
-    
+  ui:
+    image: osrf/ros:noetic-desktop-full
+    network_mode: host
+    environment:
+      - 'DISPLAY=${DISPLAY}'
+    volumes:
+      - '/tmp/.X11-unix:/tmp/.X11-unix'
+      - '~/.Xauthority:/root/.Xauthority'
+      - './perspectives:/host/perspectives'
+    command: rosrun rqt_gui rqt_gui --perspective-file /host/perspectives/Default.perspective
+  roscore:
+    image: osrf/ros:noetic-desktop-full
+    network_mode: host
+    command: roscore
+  demo:
+    extends: autonode
+    depends_on:
+      - roscore
+      - ui

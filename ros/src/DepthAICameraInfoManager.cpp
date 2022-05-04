@@ -62,21 +62,23 @@ std::shared_ptr<DepthaiCameraInfoManager> DepthaiCameraInfoManager::get(dai::Dev
     return managers[key];
 }
 
+
+
 std::shared_ptr<DepthaiCameraInfoManager>
-DepthaiCameraInfoManager::get(dai::Device &device, dai::CameraBoardSocket socket, ros::NodeHandle nh,
+DepthaiCameraInfoManager::get(dai::Device &device, dai::CalibrationHandler& calibrationHandler, dai::CameraBoardSocket socket, ros::NodeHandle nh,
                               const std::string &cname, const std::string &url) {
     tfBuffer();
     std::string key = device.getMxId() + std::to_string((int)socket);
     if(managers.find(key) == managers.end() || managers[key] == 0) {
-        managers[key] = std::make_shared<DepthaiCameraInfoManager>(device, socket, nh, cname, url);
+        managers[key] = ::std::shared_ptr<DepthaiCameraInfoManager>(new DepthaiCameraInfoManager(device, calibrationHandler, socket, nh, cname, url));
     }
     return managers[key];
 }
 
-DepthaiCameraInfoManager::DepthaiCameraInfoManager(dai::Device &device, dai::CameraBoardSocket socket,
+DepthaiCameraInfoManager::DepthaiCameraInfoManager(dai::Device &device, dai::CalibrationHandler& calibrationHandler, dai::CameraBoardSocket socket,
                                                    ros::NodeHandle nh, const std::string &cname, const std::string &url)
         : shim::camera_info_manager::CameraInfoManager(nh, cname, url),
-          device(device), socket(socket) {
+          device(device), calibrationHandler(calibrationHandler), socket(socket) {
     ROS_INFO("Creating DAI camera info manager at %s/%s", nh.getNamespace().c_str(), cname.c_str());
     spin_timer = nh.createTimer(ros::Duration(0.1), [this](const ros::TimerEvent& e) { this->spin(); });
 }
@@ -110,16 +112,16 @@ static void transmit_eeprom(dai::Device &device, dai::CalibrationHandler& calibr
         auto& manager = kv.second;
         if(manager == 0) continue;
 
-        if(manager->device.getMxId() != device.getMxId())
+        if(manager->Device().getMxId() != device.getMxId())
             continue;
 
-        auto next_socket = get_next_populated_socket(device, kv.second->socket);
+        auto next_socket = get_next_populated_socket(device, kv.second->Socket());
         auto daiInfo = DepthaiCameraInfoManager::get(device, next_socket);
         if(!daiInfo)
             continue;
         auto cname = daiInfo->cname();
         try {
-            auto extrinsics = calibrationData.getCameraExtrinsics( next_socket, kv.second->socket);
+            auto extrinsics = calibrationData.getCameraExtrinsics( next_socket, kv.second->Socket());
             //auto extrinsics = calibrationData.getCameraExtrinsics( kv.second->socket, next_socket);
             geometry_msgs::TransformStamped pose_msg = {};
             pose_msg.header.seq = 1;
@@ -164,10 +166,10 @@ bool saveAllCalibrationData(dai::Device &device) {
         auto& manager = kv.second;
         if(manager == 0) continue;
 
-        if(manager->device.getMxId() != device.getMxId())
+        if(manager->Device().getMxId() != device.getMxId())
             continue;
 
-        auto socket = manager->socket;
+        auto socket = manager->Socket();
         auto cname = manager->getCameraInfo().header.frame_id;
         auto new_info = manager->getCameraInfo();
         auto next_socket = get_next_populated_socket(device, socket);

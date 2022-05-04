@@ -1,8 +1,10 @@
+#include <sensor_msgs/CameraInfo.h>
 #include "depthai/device/Device.hpp"
 #include "depthai/pipeline/nodes.hpp"
 #include "cr/dai-tools/NodeWalker.h"
 #include "ros/ros.h"
 #include "cr/dai-tools/PipelineBuilder.h"
+#include "DepthAICameraInfoManager.hpp"
 
 namespace cr {
     namespace dai_rosnode {
@@ -11,6 +13,7 @@ namespace cr {
         class PipelinePublisher : cr::dai_tools::NodeWalker_<SetupPublishers, std::shared_ptr<dai::node::XLinkOut>, const std::string&> {
             friend class SetupPostStart;
 
+            sensor_msgs::CameraInfo CameraInfo(dai::CameraBoardSocket cameraId, int width, int height, dai::Point2f topLeftPixelId = {}, dai::Point2f bottomRightPixelId = {});
             ::ros::NodeHandle& _pnh;
             dai::Device& _device;
             std::string _frame_prefix;
@@ -18,6 +21,7 @@ namespace cr {
             cr::dai_tools::DeviceMetaInfo metaInfo;
 
             std::map<dai::CameraBoardSocket, ::ros::NodeHandle> _nodeHandles;
+            std::map<dai::CameraBoardSocket, std::shared_ptr<DepthaiCameraInfoManager>> _cameraManagers;
             ::ros::NodeHandle& getNodeHandle(dai::CameraBoardSocket socket);
 
             std::vector<std::shared_ptr<void>> keep_alive;

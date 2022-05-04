@@ -43,7 +43,6 @@ if(catkin_FOUND)
 
     add_library(cr-dai-rosnode-lib STATIC src/PipelinePublisher.cc src/ImagePublisher.cc src/ToFDepthPublisher.cc src/IMUPublisher.cc src/NNPublisher.cc)
     target_link_libraries(cr-dai-rosnode-lib cr-dai-tools ${catkin_LIBRARIES} DepthaiCameraInfoManager)
-    message(${cr_dai_ros_EXPORTED_TARGETS})
     add_dependencies(cr-dai-rosnode-lib ${cr_dai_ros_EXPORTED_TARGETS})
 
     add_executable(autonode apps/autonode.cc)
