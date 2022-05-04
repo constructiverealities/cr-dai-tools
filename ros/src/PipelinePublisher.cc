@@ -149,6 +149,7 @@ namespace cr {
             def_config.extended_disparity = stereo->initialConfig.get().algorithmControl.enableExtended;
             def_config.subpixel = stereo->initialConfig.get().algorithmControl.enableSubpixel;
             def_config.lr_check_threshold = stereo->initialConfig.getLeftRightCheckThreshold();
+            def_config.median_filter_mode = static_cast<int>(stereo->initialConfig.getMedianFilter());
             server->setConfigDefault(def_config);
 
             server->setCallback([configQueue, stereo](cr_dai_ros::StereoDepthConfig& cfg, unsigned level) {
@@ -164,6 +165,7 @@ namespace cr {
                 dcfg.setSubpixel(cfg.subpixel);
                 dcfg.setLeftRightCheck(cfg.left_right_check);
                 dcfg.setExtendedDisparity(cfg.extended_disparity);
+                dcfg.setMedianFilter(static_cast<dai::MedianFilter>(cfg.median_filter_mode));
 
                 configQueue->send(dcfg);
             });
