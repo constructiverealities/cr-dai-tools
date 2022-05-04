@@ -7,7 +7,7 @@ if(NOT TARGET cr-dai-tools)
 endif()
 
 find_package(catkin REQUIRED COMPONENTS roscpp rosbag sensor_msgs cv_bridge tf camera_info_manager image_transport tf2 catkin
-        dynamic_reconfigure geometry_msgs)
+        dynamic_reconfigure geometry_msgs std_msgs message_generation)
 
 if(catkin_FOUND)
     message("Building ROS tools...")
