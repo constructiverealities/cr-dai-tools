@@ -496,7 +496,9 @@ namespace cr {
                 _nodeHandles[socket] = ::ros::NodeHandle(_pnh, ns);
 
                 auto cname = "dai_" + _device.getMxId() + "_" + ns;
-                auto  cameraInfoManager = std::make_shared<DepthaiCameraInfoManager>(_device, socket, _nodeHandles[socket], cname);
+                //auto  cameraInfoManager = std::make_shared<DepthaiCameraInfoManager>(_device, socket, _nodeHandles[socket], cname);
+                auto cameraInfoManager = DepthaiCameraInfoManager::get(_device, socket, _nodeHandles[socket], cname);
+                cameraInfoManager->getCameraInfo();
                 keep_alive.push_back(cameraInfoManager);
             }
             return _nodeHandles[socket];

@@ -9,6 +9,8 @@ class ROS_HELPER_EXPORT DepthaiCameraInfoManager : public shim::camera_info_mana
 
 public:
     static void spin();
+    ros::Timer spin_timer;
+
     dai::Device &device;
     enum dai::CameraBoardSocket socket;
     bool loadCalibrationFlash(const std::string &flashURL, const std::string &cname) override;

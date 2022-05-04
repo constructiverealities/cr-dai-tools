@@ -1,5 +1,7 @@
 #include <tf/LinearMath/Matrix3x3.h>
 #include <tf2_ros/transform_broadcaster.h>
+
+#include <memory>
 #include "cr/dai-tools/DepthAICameraInfoManager.hpp"
 
 #include "tf2_ros/buffer.h"
@@ -65,8 +67,8 @@ DepthaiCameraInfoManager::get(dai::Device &device, dai::CameraBoardSocket socket
                               const std::string &cname, const std::string &url) {
     tfBuffer();
     std::string key = device.getMxId() + std::to_string((int)socket);
-    if(managers.find(key) == managers.end()) {
-        managers[key] = std::shared_ptr<DepthaiCameraInfoManager>(new DepthaiCameraInfoManager(device, socket, nh, cname, url));
+    if(managers.find(key) == managers.end() || managers[key] == 0) {
+        managers[key] = std::make_shared<DepthaiCameraInfoManager>(device, socket, nh, cname, url);
     }
     return managers[key];
 }
@@ -76,6 +78,7 @@ DepthaiCameraInfoManager::DepthaiCameraInfoManager(dai::Device &device, dai::Cam
         : shim::camera_info_manager::CameraInfoManager(nh, cname, url),
           device(device), socket(socket) {
     ROS_INFO("Creating DAI camera info manager at %s/%s", nh.getNamespace().c_str(), cname.c_str());
+    spin_timer = nh.createTimer(ros::Duration(0.1), [this](const ros::TimerEvent& e) { this->spin(); });
 }
 
 static dai::CameraBoardSocket get_next_socket(dai::CameraBoardSocket socket) {

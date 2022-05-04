@@ -1,0 +1,16 @@
+**/build-*
+**/build
+**/cmake-build-*
+
+**/*.bag
+**/*.db
+**/*.pkl
+**/*.ckpt
+**/events.out.*
+**/*.log
+**/*.tar
+**/*.ply
+**/*.map
+**/*.csv
+**/*.vxblx
+Dockerfile

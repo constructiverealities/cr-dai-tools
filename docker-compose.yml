@@ -1,0 +1,16 @@
+version: '2'
+services:
+  autonode:
+    build: .
+    network_mode: host
+    command: /opt/ros/noetic/bin/autonode
+    privileged: true
+    devices:
+      - '/dev:/dev'
+    volumes:
+      - '/dev:/dev'    
+      - '~/.local/share/cr-dai-tools:/root/.local/share/cr-dai-tools'      
+    environment:
+      - DEPTHAI_LEVEL="debug"
+    restart: on-failure
+    
