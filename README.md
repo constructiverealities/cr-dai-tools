@@ -1,3 +1,5 @@
+[![Running pipeline demo](https://img.youtube.com/vi/DeX8ALlisKY/0.jpg)](https://www.youtube.com/watch?v=DeX8ALlisKY)
+
 # Constructive Realities DepthAI toolkit
 
 This library is a set of tools to help create DepthAI pipelines and run depthai devices in a standard way.
