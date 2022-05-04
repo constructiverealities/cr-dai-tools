@@ -154,12 +154,9 @@ static void transmit_eeprom(dai::Device &device, dai::CalibrationHandler& calibr
     }
 }
 
-bool saveAllCalibrationData(dai::Device &device) {
-    auto calibration = device.readCalibration();
-    auto calibrationData = calibration.getEepromData();
-
+bool saveAllCalibrationData(dai::Device &device, dai::CalibrationHandler& calibrationHandler) {
     auto now = std::chrono::high_resolution_clock::now();
-    calibration.eepromToJsonFile("camera_info_backup_" + std::to_string(now.time_since_epoch().count()) + ".json");
+    calibrationHandler.eepromToJsonFile("camera_info_backup_" + std::to_string(now.time_since_epoch().count()) + ".json");
 
     for(auto& kv : managers) {
         auto name = kv.first;
@@ -183,11 +180,11 @@ bool saveAllCalibrationData(dai::Device &device) {
                 intrinsics[i][j] = new_info.K[i * 3 + j];
             }
         }
-        calibration.setCameraIntrinsics(socket, intrinsics, new_info.width, new_info.height);
+        calibrationHandler.setCameraIntrinsics(socket, intrinsics, new_info.width, new_info.height);
         std::vector<float> D;
         for (auto &d : new_info.D) D.push_back(d);
         D.resize(14);
-        calibration.setDistortionCoefficients(socket, D);
+        calibrationHandler.setDistortionCoefficients(socket, D);
 
         if(auto daiInfo = DepthaiCameraInfoManager::get(device, next_socket)) {
             auto ci = daiInfo->getCameraInfo();
@@ -214,7 +211,7 @@ bool saveAllCalibrationData(dai::Device &device) {
                          translation[0], translation[1], translation[2], tx.transform.rotation.x,
                          tx.transform.rotation.y, tx.transform.rotation.z, tx.transform.rotation.w);
                 copy(dai_rot, rot);
-                calibration.setCameraExtrinsics(socket, static_cast<dai::CameraBoardSocket>(next_socket), dai_rot, translation, translation);
+                calibrationHandler.setCameraExtrinsics(socket, static_cast<dai::CameraBoardSocket>(next_socket), dai_rot, translation, translation);
             } else {
                 ROS_WARN("%s", error_msg.c_str());
                 return false;
@@ -223,10 +220,10 @@ bool saveAllCalibrationData(dai::Device &device) {
 
     }
 
-    calibration.eepromToJsonFile("camera_info_" + std::to_string(now.time_since_epoch().count()) + ".json");
+    calibrationHandler.eepromToJsonFile("camera_info_" + std::to_string(now.time_since_epoch().count()) + ".json");
     try{
-        transmit_eeprom(device, calibration);
-        return device.flashCalibration(calibration);
+        transmit_eeprom(device, calibrationHandler);
+        return device.flashCalibration(calibrationHandler);
     } catch(std::runtime_error& e) {
         ROS_WARN("%s", e.what());
         return false;
@@ -260,22 +257,18 @@ void DepthaiCameraInfoManager::spin() {
 bool
 DepthaiCameraInfoManager::saveCalibrationFlash(const sensor_msgs::CameraInfo &_new_info, const std::string &flashURL,
                                                const std::string &cname) {
-    auto calibration = device.readCalibration();
-    auto calibrationData = calibration.getEepromData();
-
     auto now = std::chrono::high_resolution_clock::now();
-    calibration.eepromToJsonFile("camera_info_backup_" + std::to_string(now.time_since_epoch().count()) + ".json");
+    calibrationHandler.eepromToJsonFile("camera_info_backup_" + std::to_string(now.time_since_epoch().count()) + ".json");
 
     sensor_msgs::CameraInfo new_info = _new_info;
     new_info.header.frame_id = cname;
     this->cam_info_ = new_info;
 
-    return saveAllCalibrationData(device);
+    return saveAllCalibrationData(device, calibrationHandler);
 }
 
 bool DepthaiCameraInfoManager::loadCalibrationFlash(const std::string &flashURL, const std::string &cname) {
-    auto calibrationData = device.readCalibration();
-    auto saveData = calibrationData.getEepromData();
+    auto saveData = calibrationHandler.getEepromData();
     auto camera_data = saveData.cameraData[socket];
 
     sensor_msgs::CameraInfo cameraInfo = { };
@@ -296,7 +289,7 @@ bool DepthaiCameraInfoManager::loadCalibrationFlash(const std::string &flashURL,
     cameraInfo.header.stamp = ros::Time::now();
     cameraInfo.header.seq = 1;
 
-    transmit_eeprom(device, calibrationData);
+    transmit_eeprom(device, calibrationHandler);
 
     this->setCameraInfo(cameraInfo);
     return true;
