@@ -1,0 +1,30 @@
+version: '2'
+services:   
+  autonode:
+    image: ghcr.io/constructiverealities/cr-dai-tools-ros2:develop
+    build:
+      context: .
+      dockerfile: Dockerfile.ros2
+    privileged: true
+    devices:
+      - '/dev:/dev'
+    volumes:
+      - '/dev:/dev'    
+      - '~/.local/share/cr-dai-tools:/root/.local/share/cr-dai-tools'      
+    environment:
+      - DEPTHAI_LEVEL="debug"
+      - ROS_DISTRO=foxy
+    restart: on-failure
+  ui:
+    image: cr-ros2-dev-img
+    environment:
+      - 'DISPLAY=${DISPLAY}'
+    volumes:    
+      - '/tmp/.X11-unix:/tmp/.X11-unix'
+      - '~/.Xauthority:/root/.Xauthority'
+      - './perspectives:/host/perspectives'
+    command: ros2 run rqt_gui rqt_gui --perspective-file /host/perspectives/Default.perspective
+  demo:
+    extends: autonode
+    depends_on:
+      - ui

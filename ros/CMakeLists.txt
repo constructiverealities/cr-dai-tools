@@ -99,13 +99,13 @@ if(BUILD_ROS)
     include_directories(${catkin_INCLUDE_DIRS})
     include_directories(${cr_dai_ros_INCLUDE_DIRS})
 
-    add_library(DepthaiCameraInfoManager STATIC ./src/DepthAICameraInfoManager.cpp ./src/virtual_camera_info_manager.cc ./src/ros_impl.cc)
-    target_link_libraries(DepthaiCameraInfoManager depthai::core ${catkin_LIBRARIES})
-    target_include_directories(DepthaiCameraInfoManager PUBLIC include ${depthai_INCLUDE_DIRS})
+    add_library(cr-dai-rosnode-lib STATIC src/PipelinePublisher.cc src/ImagePublisher.cc src/ToFDepthPublisher.cc src/IMUPublisher.cc src/NNPublisher.cc ./src/DepthAICameraInfoManager.cpp ./src/virtual_camera_info_manager.cc ./src/ros_impl.cc)
+    target_link_libraries(cr-dai-rosnode-lib cr-dai-tools ${catkin_LIBRARIES} depthai::core)
+    target_include_directories(cr-dai-rosnode-lib PUBLIC include ${depthai_INCLUDE_DIRS})
 
-    add_library(cr-dai-rosnode-lib STATIC src/PipelinePublisher.cc src/ImagePublisher.cc src/ToFDepthPublisher.cc src/IMUPublisher.cc src/NNPublisher.cc)
-    target_link_libraries(cr-dai-rosnode-lib cr-dai-tools ${catkin_LIBRARIES} DepthaiCameraInfoManager)
-    #add_dependencies(cr-dai-rosnode-lib ${cr_dai_ros_EXPORTED_TARGETS})
+    if(NOT "${cr_dai_ros_EXPORTED_TARGETS}" STREQUAL "")
+        add_dependencies(cr-dai-rosnode-lib ${cr_dai_ros_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+    endif()
 
     add_executable(autonode apps/autonode.cc)
     target_link_libraries(autonode cr-dai-rosnode-lib cr-dai-tools)
@@ -119,14 +119,6 @@ if(ament_cmake_FOUND)
     ament_export_include_directories(include)
     ament_export_libraries(depthai_bridge)
     ament_export_dependencies(${dependencies})
-
-    ament_target_dependencies(DepthaiCameraInfoManager cv_bridge
-            image_transport
-            rclcpp
-            sensor_msgs tf2 tf2_ros
-            stereo_msgs
-            std_msgs
-            vision_msgs camera_info_manager)
 
     ament_target_dependencies(autonode cv_bridge
             image_transport

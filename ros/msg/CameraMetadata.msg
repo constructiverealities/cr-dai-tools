@@ -1,4 +1,3 @@
-
 # Various metadata from DepthAI cameras
 
 std_msgs/Header header
