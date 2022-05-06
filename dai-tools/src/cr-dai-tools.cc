@@ -20,7 +20,7 @@ namespace cr {
 
             std::map<std::string, std::shared_ptr<dai::DataOutputQueue>> outputQueues;
             for(auto& n : device->getOutputQueueNames()) {
-                outputQueues[n] = device->getOutputQueue(n, 8, false);
+                outputQueues[n] = device->getOutputQueue(n, 4, false);
             }
 
             auto start = std::chrono::high_resolution_clock::now();

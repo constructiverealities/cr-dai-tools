@@ -1,10 +1,29 @@
 <?xml version="1.0"?>
-<package format="2">
+<package format="3">
     <maintainer email="jdavidberger@gmail.com">justin</maintainer>
     <name>cr_dai_ros</name>
     <version>0.0.1</version>
     <description>Bag of tools for tof impl</description>
     <license>MIT</license>
-    <depend>roscpp;geometry_msgs;message_runtime;sensor_msgs;std_msgs;dynamic_reconfigure</depend>
-    <buildtool_depend>catkin</buildtool_depend>
+    <depend>roscpp;geometry_msgs;message_runtime;sensor_msgs;std_msgs;dynamic_reconfigure;tf2_ros</depend>
+
+    <buildtool_depend condition="$ROS_VERSION == 1">catkin</buildtool_depend>
+    <buildtool_depend condition="$ROS_VERSION == 2">ament_cmake</buildtool_depend>
+
+    <build_depend condition="$ROS_VERSION == 1">message_generation</build_depend>
+    <exec_depend condition="$ROS_VERSION == 1">message_runtime</exec_depend>
+
+    <depend condition="$ROS_VERSION == 2">builtin_interfaces</depend>
+    <depend condition="$ROS_VERSION == 2">rclcpp</depend>
+    <depend condition="$ROS_VERSION == 2">rosidl_default_generators</depend>
+
+    <member_of_group condition="$ROS_VERSION == 2">rosidl_interface_packages</member_of_group>
+
+    <export>
+        <build_type condition="$ROS_VERSION == 1">catkin</build_type>
+        <build_type condition="$ROS_VERSION == 2">ament_cmake</build_type>
+    </export>
+
+    <exec_depend>rosidl_default_runtime</exec_depend>
+    <member_of_group>rosidl_interface_packages</member_of_group>
 </package>

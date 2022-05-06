@@ -11,12 +11,7 @@
 #include <unistd.h>
 #endif
 
-#include <ros/ros.h>
-#include <ros/package.h>
-#include <boost/algorithm/string.hpp>
-#include <camera_calibration_parsers/parse.h>
-
-#include "camera_info_manager/camera_info_manager.h"
+#include "cr/dai-tools/ros_headers.h"
 
 namespace shim {
     namespace camera_info_manager
@@ -35,7 +30,7 @@ namespace shim {
  * @param cname default camera name
  * @param url default Uniform Resource Locator for loading and saving data.
  */
-        CameraInfoManager::CameraInfoManager(ros::NodeHandle nh,
+        CameraInfoManager::CameraInfoManager(ros_impl::Node nh,
                                              const std::string &cname,
                                              const std::string &url):
                 nh_(nh),
@@ -44,8 +39,7 @@ namespace shim {
                 loaded_cam_info_(false)
         {
             // register callback for camera calibration service request
-            info_service_ = nh_.advertiseService("set_camera_info",
-                                                 &CameraInfoManager::setCameraInfoService, this);
+            ros_impl::create_service<ros_impl::sensor_msgs::SetCameraInfo>(nh_, "set_camera_info", &CameraInfoManager::setCameraInfoService, this);
         }
 
 /** Get the current CameraInfo data.
@@ -63,14 +57,13 @@ namespace shim {
  *          normally be the same as the corresponding Image message
  *          Header fields.
  */
-        sensor_msgs::CameraInfo CameraInfoManager::getCameraInfo(void)
+        ros_impl::sensor_msgs::CameraInfo CameraInfoManager::getCameraInfo(void)
         {
-            while (ros::ok())
             {
                 std::string cname;
                 std::string url;
                 {
-                    boost::mutex::scoped_lock lock_(mutex_);
+                    std::lock_guard lock_(mutex_);
                     if (loaded_cam_info_)
                     {
                         //assert(cam_info_.header.frame_id != "");
@@ -88,40 +81,11 @@ namespace shim {
 
                 // attempt load without the lock, it is not recursive
                 if(loadCalibration(url, cname)) {
-                    //assert(cam_info_.header.frame_id != "");
+                    return cam_info_;           // all done
                 }
             }
 
-            return sensor_msgs::CameraInfo();
-        }
-
-/** Get file name corresponding to a @c package: URL.
- *
- * @param url a copy of the Uniform Resource Locator
- * @return file name if package found, "" otherwise
- */
-        std::string CameraInfoManager::getPackageFileName(const std::string &url)
-        {
-            ROS_DEBUG_STREAM("camera calibration URL: " << url);
-
-            // Scan URL from after "package://" until next '/' and extract
-            // package name.  The parseURL() already checked that it's present.
-            size_t prefix_len = std::string("package://").length();
-            size_t rest = url.find('/', prefix_len);
-            std::string package(url.substr(prefix_len, rest - prefix_len));
-
-            // Look up the ROS package path name.
-            std::string pkgPath(ros::package::getPath(package));
-            if (pkgPath.empty())                  // package not found?
-            {
-                ROS_WARN_STREAM("unknown package: " << package << " (ignored)");
-                return pkgPath;
-            }
-            else
-            {
-                // Construct file name from package location and remainder of URL.
-                return pkgPath + url.substr(rest);
-            }
+            return ros_impl::sensor_msgs::CameraInfo();
         }
 
 /** Is the current CameraInfo calibrated?
@@ -135,12 +99,11 @@ namespace shim {
  */
         bool CameraInfoManager::isCalibrated(void)
         {
-            while (true)
             {
                 std::string cname;
                 std::string url;
                 {
-                    boost::mutex::scoped_lock lock_(mutex_);
+                    std::lock_guard lock_(mutex_);
                     if (loaded_cam_info_)
                     {
                         return (cam_info_.K[0] != 0.0);
@@ -158,6 +121,7 @@ namespace shim {
                 // attempt load without the lock, it is not recursive
                 loadCalibration(url, cname);
             }
+            return (cam_info_.K[0] != 0.0);
         }
 
 /** Load CameraInfo calibration data (if any).
@@ -180,14 +144,13 @@ namespace shim {
 
             if (url_type != URL_empty)
             {
-                ROS_INFO_STREAM("camera calibration URL: " << resURL);
+                ROS_IMPL_INFO(this->nh_, "camera calibration URL: %s", resURL.c_str());
             }
 
             switch (url_type)
             {
                 case URL_empty:
                 {
-                    ROS_INFO("using default calibration URL");
                     success = loadCalibration(default_camera_info_url, cname);
                     break;
                 }
@@ -201,16 +164,9 @@ namespace shim {
                     success = loadCalibrationFlash(resURL.substr(8), cname);
                     break;
                 }
-                case URL_package:
-                {
-                    std::string filename(getPackageFileName(resURL));
-                    if (!filename.empty())
-                        success = loadCalibrationFile(filename, cname);
-                    break;
-                }
                 default:
                 {
-                    ROS_ERROR_STREAM("Invalid camera calibration URL: " << resURL);
+                    ROS_IMPL_ERROR(nh_, "Invalid camera calibration URL: %s", url_.c_str() );
                     break;
                 }
             }
@@ -220,7 +176,7 @@ namespace shim {
 
         bool CameraInfoManager::loadCalibrationFlash(const std::string &flashURL,
                                                      const std::string &cname) {
-            ROS_WARN("[CameraInfoManager] reading from flash not implemented yet");
+            ROS_IMPL_WARN(nh_, "[CameraInfoManager] reading from flash not implemented yet");
             return false;
         }
 
@@ -239,28 +195,22 @@ namespace shim {
         {
             bool success = false;
 
-            ROS_DEBUG_STREAM("reading camera calibration from " << filename);
             std::string cam_name;
-            sensor_msgs::CameraInfo cam_info;
+            ros_impl::sensor_msgs::CameraInfo cam_info;
 
             if (::camera_calibration_parsers::readCalibration(filename, cam_name, cam_info))
             {
-                if (cname != cam_name)
-                {
-                    ROS_WARN_STREAM("[" << cname << "] does not match name "
-                                        << cam_name << " in file " << filename);
-                }
                 cam_info.header.frame_id = cname;
                 success = true;
                 {
                     // lock only while updating cam_info_
-                    boost::mutex::scoped_lock lock(mutex_);
+                    std::lock_guard lock(mutex_);
                     cam_info_ = cam_info;
                 }
             }
             else
             {
-                ROS_WARN_STREAM("Camera calibration file " << filename << " not found.");
+                ROS_IMPL_WARN(nh_, "Camera calibration file %s not found.", filename.c_str());
             }
 
             return success;
@@ -281,7 +231,7 @@ namespace shim {
         {
             std::string cname;
             {
-                boost::mutex::scoped_lock lock(mutex_);
+                std::lock_guard lock(mutex_);
                 url_ = url;
                 cname = camera_name_;
                 loaded_cam_info_ = true;
@@ -354,9 +304,8 @@ namespace shim {
                 else
                 {
                     // not a valid substitution variable
-                    ROS_ERROR_STREAM("[CameraInfoManager]"
-                                     " invalid URL substitution (not resolved): "
-                                             << url);
+                    ROS_IMPL_ERROR(nh_, "[CameraInfoManager]"
+                                     " invalid URL substitution (not resolved): %s", url.c_str());
                     resolved += "$";            // keep the bogus '$'
                 }
 
@@ -380,15 +329,15 @@ namespace shim {
             {
                 return URL_empty;
             }
-            if (boost::iequals(url.substr(0, 8), "file:///"))
+            if ((url.substr(0, 8) == "file:///"))
             {
                 return URL_file;
             }
-            if (boost::iequals(url.substr(0, 9), "flash:///"))
+            if (url.substr(0, 9) == "flash:///")
             {
                 return URL_flash;
             }
-            if (boost::iequals(url.substr(0, 10), "package://"))
+            if (url.substr(0, 10) == "package://")
             {
                 // look for a '/' following the package name, make sure it is
                 // there, the name is not empty, and something follows it
@@ -410,7 +359,7 @@ namespace shim {
  * @return true, if successful
  */
         bool
-        CameraInfoManager::saveCalibration(const sensor_msgs::CameraInfo &new_info,
+        CameraInfoManager::saveCalibration(const ros_impl::sensor_msgs::CameraInfo &new_info,
                                            const std::string &url,
                                            const std::string &cname)
         {
@@ -431,13 +380,6 @@ namespace shim {
                     success = saveCalibrationFile(new_info, resURL.substr(7), cname);
                     break;
                 }
-                case URL_package:
-                {
-                    std::string filename(getPackageFileName(resURL));
-                    if (!filename.empty())
-                        success = saveCalibrationFile(new_info, filename, cname);
-                    break;
-                }
                 case URL_flash:
                 {
                     success = saveCalibrationFlash(new_info, resURL.substr(8), cname);
@@ -446,7 +388,7 @@ namespace shim {
                 default:
                 {
                     // invalid URL, save to default location
-                    ROS_ERROR_STREAM("invalid url: " << resURL << " (ignored)");
+                    ROS_IMPL_ERROR(nh_, "invalid url: %s (ignored)", url.c_str());
                     success = saveCalibration(new_info, default_camera_info_url, cname);
                     break;
                 }
@@ -455,10 +397,9 @@ namespace shim {
             return success;
         }
 
-        bool CameraInfoManager::saveCalibrationFlash(const sensor_msgs::CameraInfo &new_info,
+        bool CameraInfoManager::saveCalibrationFlash(const ros_impl::sensor_msgs::CameraInfo &new_info,
                                                      const std::string &flashURL,
                                                      const std::string &cname) {
-            ROS_ERROR_STREAM("flash url: " << flashURL << " (ignored)");
             return saveCalibration(new_info, default_camera_info_url, cname);
         }
 
@@ -472,19 +413,16 @@ namespace shim {
  * @return true, if successful
  */
         bool
-        CameraInfoManager::saveCalibrationFile(const sensor_msgs::CameraInfo &new_info,
+        CameraInfoManager::saveCalibrationFile(const ros_impl::sensor_msgs::CameraInfo &new_info,
                                                const std::string &filename,
                                                const std::string &cname)
         {
-            ROS_INFO_STREAM("writing calibration data to " << filename);
-
             // isolate the name of the containing directory
             size_t last_slash = filename.rfind('/');
             if (last_slash >= filename.length())
             {
                 // No slash in the name.  This should never happen, the URL
                 // parser ensures there is at least one '/' at the beginning.
-                ROS_ERROR_STREAM("filename [" << filename << "] has no '/'");
                 return false;                     // not a valid URL
             }
 
@@ -502,22 +440,18 @@ namespace shim {
                     if (rc != 0)
                     {
                         // mkdir failed
-                        ROS_ERROR_STREAM("unable to create path to directory ["
-                                                 << dirname << "]");
                         return false;
                     }
                 }
                 else
                 {
                     // not accessible, or something screwy
-                    ROS_ERROR_STREAM("directory [" << dirname << "] not accessible");
-                    return false;
+                   return false;
                 }
             }
             else if (!S_ISDIR(stat_data.st_mode))
             {
                 // dirname exists but is not a directory
-                ROS_ERROR_STREAM("[" << dirname << "] is not a directory");
                 return false;
             }
 
@@ -525,7 +459,7 @@ namespace shim {
 
             // Currently, writeCalibration() always returns true no matter what
             // (ros-pkg ticket #5010).
-            return camera_calibration_parsers::writeCalibration(filename, cname, new_info);
+            return ::camera_calibration_parsers::writeCalibration(filename, cname, new_info);
         }
 
 /** Callback for SetCameraInfo request.
@@ -537,26 +471,18 @@ namespace shim {
  * @return true if message handled
  */
         bool
-        CameraInfoManager::setCameraInfoService(sensor_msgs::SetCameraInfo::Request &req,
-                                                sensor_msgs::SetCameraInfo::Response &rsp)
+        CameraInfoManager::setCameraInfoService(ros_impl::sensor_msgs::SetCameraInfo::Request &req,
+                                                ros_impl::sensor_msgs::SetCameraInfo::Response &rsp)
         {
             // copies of class variables needed for saving calibration
             std::string url_copy;
             std::string cname;
             {
-                boost::mutex::scoped_lock lock(mutex_);
+                std::lock_guard lock(mutex_);
                 cam_info_ = req.camera_info;
                 url_copy = url_;
                 cname = camera_name_;
                 loaded_cam_info_ = true;
-            }
-
-            if (!nh_.ok())
-            {
-                ROS_ERROR("set_camera_info service called, but driver not running.");
-                rsp.status_message = "Camera driver not running.";
-                rsp.success = false;
-                return false;
             }
 
             rsp.success = saveCalibration(req.camera_info, url_copy, cname);
@@ -593,7 +519,7 @@ namespace shim {
             // name might cause the existing URL to resolve somewhere else,
             // force @c cam_info_ to be reloaded before being used again.
             {
-                boost::mutex::scoped_lock lock(mutex_);
+                std::lock_guard lock(mutex_);
                 camera_name_ = cname;
                 loaded_cam_info_ = false;
             }
@@ -609,9 +535,9 @@ namespace shim {
  *
  * @post @c cam_info_ updated, if valid;
  */
-        bool CameraInfoManager::setCameraInfo(const sensor_msgs::CameraInfo &camera_info)
+        bool CameraInfoManager::setCameraInfo(const ros_impl::sensor_msgs::CameraInfo &camera_info)
         {
-            boost::mutex::scoped_lock lock(mutex_);
+            std::lock_guard lock(mutex_);
 
             cam_info_ = camera_info;
             loaded_cam_info_ = true;
@@ -630,7 +556,7 @@ namespace shim {
         {
             std::string cname;                    // copy of camera name
             {
-                boost::mutex::scoped_lock lock(mutex_);
+                std::lock_guard lock(mutex_);
                 cname = camera_name_;
             } // release the lock
 

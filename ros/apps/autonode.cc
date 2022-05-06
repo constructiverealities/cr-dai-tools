@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
     if(!d) {
         return -1;
     }
-    ros::init(argc, argv, "dai_" + d->getMxId());
+
     if(!d) {
         return -1;
     }
@@ -27,18 +27,19 @@ int main(int argc, char** argv) {
     }
     fprintf(stderr, "Usb speed is %d\n", (int)d->getUsbSpeed());
 
-    ROS_INFO("Creating Pipeline...");
     auto pipeline = cr::dai_tools::GeneratePipeline(d);
     cr::dai_tools::DeviceMetaInfo metaInfo(d);
     std::string tfPrefix = metaInfo.Name;
-    ros::NodeHandle n(tfPrefix);
 
-    ROS_INFO("Creating Publisher...");
+    auto g = ros_impl::init(argc, argv, "dai_" + d->getMxId());
+    auto n = ros_impl::make_node(g, tfPrefix);
+    ROS_IMPL_INFO(n, "Creating Pipeline... %s", ros_impl::Namespace(n));
+
+    ROS_IMPL_INFO(n, "Creating Publisher...");
     auto publisher = cr::dai_rosnode::PipelinePublisher(n, d, *pipeline);
 
-    ROS_INFO("Setup done, wait...");
-    ros::spin();
+    ROS_IMPL_INFO(n, "Setup done, wait...");
+    ros_impl::spin(g);
 
-    ROS_INFO("Exiting...");
     return 0;
 }

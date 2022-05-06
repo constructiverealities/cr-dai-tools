@@ -1,11 +1,6 @@
-#include <tf/LinearMath/Matrix3x3.h>
-#include <tf2_ros/transform_broadcaster.h>
-
+#include "cr/dai-tools/ros_headers.h"
 #include <memory>
 #include "cr/dai-tools/DepthAICameraInfoManager.hpp"
-
-#include "tf2_ros/buffer.h"
-#include "tf2_ros/transform_listener.h"
 
 template<typename D_T>
 static void copy(D_T &d, const std::vector<float> &s) {
@@ -24,7 +19,7 @@ static void copy(D_T &d, const std::vector<std::vector<float>> &s) {
     }
 }
 
-static void copy(std::vector<std::vector<float>> &d, const tf::Matrix3x3& s) {
+static void copy(std::vector<std::vector<float>> &d, const tf2::Matrix3x3& s) {
     d.resize(3);
     for(int i = 0;i < 3;i++) {
         d[i].resize(3);
@@ -46,17 +41,6 @@ static void copy43(D_T &d, const std::vector<std::vector<float>> &s) {
 
 static std::map<std::string, std::shared_ptr<DepthaiCameraInfoManager>> managers;
 
-static tf2_ros::Buffer& tfBuffer() {
-    static tf2_ros::Buffer buffer;
-    static tf2_ros::TransformListener tfListener(buffer);
-    return buffer;
-}
-
-static tf2_ros::TransformBroadcaster& tfBroadcaster() {
-    static tf2_ros::TransformBroadcaster broadcaster;
-    return broadcaster;
-}
-
 std::shared_ptr<DepthaiCameraInfoManager> DepthaiCameraInfoManager::get(dai::Device &device, enum dai::CameraBoardSocket socket) {
     std::string key = device.getMxId() + std::to_string((int)socket);
     return managers[key];
@@ -65,9 +49,8 @@ std::shared_ptr<DepthaiCameraInfoManager> DepthaiCameraInfoManager::get(dai::Dev
 
 
 std::shared_ptr<DepthaiCameraInfoManager>
-DepthaiCameraInfoManager::get(dai::Device &device, dai::CalibrationHandler& calibrationHandler, dai::CameraBoardSocket socket, ros::NodeHandle nh,
+DepthaiCameraInfoManager::get(dai::Device &device, dai::CalibrationHandler& calibrationHandler, dai::CameraBoardSocket socket, ros_impl::Node nh,
                               const std::string &cname, const std::string &url) {
-    tfBuffer();
     std::string key = device.getMxId() + std::to_string((int)socket);
     if(managers.find(key) == managers.end() || managers[key] == 0) {
         managers[key] = ::std::shared_ptr<DepthaiCameraInfoManager>(new DepthaiCameraInfoManager(device, calibrationHandler, socket, nh, cname, url));
@@ -76,11 +59,16 @@ DepthaiCameraInfoManager::get(dai::Device &device, dai::CalibrationHandler& cali
 }
 
 DepthaiCameraInfoManager::DepthaiCameraInfoManager(dai::Device &device, dai::CalibrationHandler& calibrationHandler, dai::CameraBoardSocket socket,
-                                                   ros::NodeHandle nh, const std::string &cname, const std::string &url)
+                                                   ros_impl::Node nh, const std::string &cname, const std::string &url)
         : shim::camera_info_manager::CameraInfoManager(nh, cname, url),
-          device(device), calibrationHandler(calibrationHandler), socket(socket) {
-    ROS_INFO("Creating DAI camera info manager at %s/%s", nh.getNamespace().c_str(), cname.c_str());
-    spin_timer = nh.createTimer(ros::Duration(0.1), [this](const ros::TimerEvent& e) { this->spin(); });
+          device(device), calibrationHandler(calibrationHandler), socket(socket),
+#if HAS_ROS2
+          broadcaster(nh), buffer(nh->get_clock()),
+#endif
+          listener(buffer) {
+    ROS_IMPL_INFO(nh, "Creating DAI camera info manager at %s/%s", ros_impl::Namespace(nh), cname.c_str());
+    spin_timer = ros_impl::create_wall_timer(nh, .1, [this]() { this->spin(); });
+    //spin_timer = nh.createTimer(ros::Duration(0.1),
 }
 
 static dai::CameraBoardSocket get_next_socket(dai::CameraBoardSocket socket) {
@@ -105,15 +93,15 @@ static dai::CameraBoardSocket get_next_populated_socket(dai::Device &device, dai
     return get_next_populated_socket(device, next_socket);
 }
 
-std::map<std::string, geometry_msgs::TransformStamped> device_transforms;
-static void transmit_eeprom(dai::Device &device, dai::CalibrationHandler& calibrationData) {
+std::map<std::string, ros_impl::geometry_msgs::TransformStamped> device_transforms;
+static void transmit_eeprom(const ros_impl::Node& n, dai::Device &device, dai::CalibrationHandler& calibrationData) {
     for(auto& kv : managers) {
         auto name = kv.first;
         auto& manager = kv.second;
         if(manager == 0) continue;
 
-        if(manager->Device().getMxId() != device.getMxId())
-            continue;
+//        if(manager->Device().getMxId() != device.getMxId())
+//            continue;
 
         auto next_socket = get_next_populated_socket(device, kv.second->Socket());
         auto daiInfo = DepthaiCameraInfoManager::get(device, next_socket);
@@ -123,22 +111,22 @@ static void transmit_eeprom(dai::Device &device, dai::CalibrationHandler& calibr
         try {
             auto extrinsics = calibrationData.getCameraExtrinsics( next_socket, kv.second->Socket());
             //auto extrinsics = calibrationData.getCameraExtrinsics( kv.second->socket, next_socket);
-            geometry_msgs::TransformStamped pose_msg = {};
-            pose_msg.header.seq = 1;
-            pose_msg.header.stamp = ros::Time::now();
+            ros_impl::geometry_msgs::TransformStamped pose_msg;
+            //pose_msg.header.seq = 1;
+            pose_msg.header.stamp = ros_impl::now(n);
             pose_msg.header.frame_id = cname;
             pose_msg.child_frame_id = kv.second->cname();
 
             pose_msg.transform.translation.x = extrinsics[0][3] * .01;
             pose_msg.transform.translation.y = extrinsics[1][3] * .01;
             pose_msg.transform.translation.z = extrinsics[2][3] * .01;
-            tf::Matrix3x3 m2;
+            tf2::Matrix3x3 m2;
             for (int i = 0; i < 3; i++) {
                 for (int j = 0; j < 3; j++) {
                     m2[i][j] = extrinsics[i][j];
                 }
             }
-            tf::Quaternion q;
+            tf2::Quaternion q;
             m2.getRotation(q);
             pose_msg.transform.rotation.x = q.x();
             pose_msg.transform.rotation.y = q.y();
@@ -147,14 +135,14 @@ static void transmit_eeprom(dai::Device &device, dai::CalibrationHandler& calibr
 
             device_transforms[pose_msg.child_frame_id] = pose_msg;
             //tfBroadcaster().sendTransform(pose_msg);
-            ROS_INFO("Broadcast tx between %s and %s", cname.c_str(), kv.second->cname().c_str());
+            ROS_IMPL_INFO(n, "Broadcast tx between %s and %s", cname.c_str(), kv.second->cname().c_str());
         } catch(std::runtime_error& e) {
-            ROS_WARN("Could not broadcast tx between %s and %s, %s", cname.c_str(), kv.second->cname().c_str(), e.what());
+            ROS_IMPL_WARN(n, "Could not broadcast tx between %s and %s, %s", cname.c_str(), kv.second->cname().c_str(), e.what());
         }
     }
 }
 
-bool saveAllCalibrationData(dai::Device &device, dai::CalibrationHandler& calibrationHandler) {
+bool saveAllCalibrationData(const ros_impl::Node& n, dai::Device &device, dai::CalibrationHandler& calibrationHandler) {
     auto now = std::chrono::high_resolution_clock::now();
     calibrationHandler.eepromToJsonFile("camera_info_backup_" + std::to_string(now.time_since_epoch().count()) + ".json");
 
@@ -170,7 +158,9 @@ bool saveAllCalibrationData(dai::Device &device, dai::CalibrationHandler& calibr
         auto cname = manager->getCameraInfo().header.frame_id;
         auto new_info = manager->getCameraInfo();
         auto next_socket = get_next_populated_socket(device, socket);
-        ROS_INFO("Saving calibration for %s Fx %f Fy %f Cx %f Cy %f %d %d", cname.c_str(), new_info.K[0], new_info.K[4], new_info.K[2], new_info.K[5], (int)socket, (int)next_socket);
+        ROS_IMPL_INFO(n, "Saving calibration for %s Fx %f Fy %f Cx %f Cy %f %d %d", cname.c_str(), new_info.K[0],
+                 new_info.K[4],
+                 new_info.K[2], new_info.K[5], (int) socket, (int) next_socket);
 
         std::vector<std::vector<float>> intrinsics;
         intrinsics.resize(3);
@@ -194,11 +184,11 @@ bool saveAllCalibrationData(dai::Device &device, dai::CalibrationHandler& calibr
             std::string error_msg;
 
             /// NOTE: lookupTransform is target, source. setCameraExtrinsics is source, target.
-            if(tfBuffer().canTransform(nextFrame, thisFrame, ros::Time(0), &error_msg)) {
-                //auto tx = tfBuffer().lookupTransform(nextFrame, thisFrame, ros::Time(0));
-                auto tx = tfBuffer().lookupTransform(thisFrame, nextFrame, ros::Time(0));
-                tf::Matrix3x3 rot;
-                rot.setRotation(tf::Quaternion(tx.transform.rotation.x,
+            if(manager->buffer.canTransform(nextFrame, thisFrame, ros_impl::now(n))) {
+                //auto tx = buffer.lookupTransform(nextFrame, thisFrame, ros::Time(0));
+                auto tx = manager->buffer.lookupTransform(thisFrame, nextFrame, ros_impl::now(n));
+                tf2::Matrix3x3 rot;
+                rot.setRotation(tf2::Quaternion(tx.transform.rotation.x,
                                                tx.transform.rotation.y,
                                                tx.transform.rotation.z,
                                                tx.transform.rotation.w));
@@ -207,13 +197,13 @@ bool saveAllCalibrationData(dai::Device &device, dai::CalibrationHandler& calibr
                                                    (float)tx.transform.translation.y * 100.f,
                                                    (float)tx.transform.translation.z * 100.f};
 
-                ROS_INFO("Saving extrinsics between %s and %s [%f %f %f] [%f %f %f %f]", cname.c_str(), nextFrame.c_str(),
+                ROS_IMPL_INFO(n, "Saving extrinsics between %s and %s [%f %f %f] [%f %f %f %f]", cname.c_str(), nextFrame.c_str(),
                          translation[0], translation[1], translation[2], tx.transform.rotation.x,
                          tx.transform.rotation.y, tx.transform.rotation.z, tx.transform.rotation.w);
                 copy(dai_rot, rot);
                 calibrationHandler.setCameraExtrinsics(socket, static_cast<dai::CameraBoardSocket>(next_socket), dai_rot, translation, translation);
             } else {
-                ROS_WARN("%s", error_msg.c_str());
+                ROS_IMPL_WARN(n, "%s", error_msg.c_str());
                 return false;
             }
         }
@@ -222,60 +212,57 @@ bool saveAllCalibrationData(dai::Device &device, dai::CalibrationHandler& calibr
 
     calibrationHandler.eepromToJsonFile("camera_info_" + std::to_string(now.time_since_epoch().count()) + ".json");
     try{
-        transmit_eeprom(device, calibrationHandler);
+        transmit_eeprom(n, device, calibrationHandler);
         return device.flashCalibration(calibrationHandler);
     } catch(std::runtime_error& e) {
-        ROS_WARN("%s", e.what());
+        ROS_IMPL_WARN(n, "%s", e.what());
         return false;
     }
 }
 
 void DepthaiCameraInfoManager::spin() {
-    static double last = 0;
-    auto now = ros::Time::now().toSec();
-    if(now - last < .1) {
-        return;
-    }
-    last = now;
-    ros::V_string nodes;
-    ros::master::getNodes(nodes);
+//
+//    ros::V_string nodes;
+//    ros::master::getNodes(nodes);
+//    bool has_broadcast_node = false;
+//    for(auto& node : nodes) {
+//        if(node == "/broadcast_tf_graph") {
+//            has_broadcast_node = true;
+//        }
+//    }
     bool has_broadcast_node = false;
-    for(auto& node : nodes) {
-        if(node == "/broadcast_tf_graph") {
-            has_broadcast_node = true;
-        }
-    }
-
     if(!has_broadcast_node) {
         for(auto& kv : device_transforms) {
-            kv.second.header.stamp = ros::Time::now();
-            tfBroadcaster().sendTransform(kv.second);
+            kv.second.header.stamp = ros_impl::now(nh_);
+            broadcaster.sendTransform(kv.second);
         }
     }
 }
 
 bool
-DepthaiCameraInfoManager::saveCalibrationFlash(const sensor_msgs::CameraInfo &_new_info, const std::string &flashURL,
+DepthaiCameraInfoManager::saveCalibrationFlash(const ros_impl::sensor_msgs::CameraInfo &_new_info, const std::string &flashURL,
                                                const std::string &cname) {
     auto now = std::chrono::high_resolution_clock::now();
     calibrationHandler.eepromToJsonFile("camera_info_backup_" + std::to_string(now.time_since_epoch().count()) + ".json");
 
-    sensor_msgs::CameraInfo new_info = _new_info;
+    ros_impl::sensor_msgs::CameraInfo new_info = _new_info;
     new_info.header.frame_id = cname;
     this->cam_info_ = new_info;
 
-    return saveAllCalibrationData(device, calibrationHandler);
+    return saveAllCalibrationData(nh_, device, calibrationHandler);
 }
 
 bool DepthaiCameraInfoManager::loadCalibrationFlash(const std::string &flashURL, const std::string &cname) {
     auto saveData = calibrationHandler.getEepromData();
     auto camera_data = saveData.cameraData[socket];
 
-    sensor_msgs::CameraInfo cameraInfo = { };
+    ros_impl::sensor_msgs::CameraInfo cameraInfo = { };
     cameraInfo.distortion_model = "rational_polynomial";
     cameraInfo.width = camera_data.width;
+
     copy(cameraInfo.K, camera_data.intrinsicMatrix);
-    ROS_INFO("Loading calibration for %s Fx %f Fy %f Cx %f Cy %f", cname.c_str(), cameraInfo.K[0], cameraInfo.K[4], cameraInfo.K[2], cameraInfo.K[5]);
+    ROS_IMPL_INFO(nh_, "Loading calibration for %s Fx %f Fy %f Cx %f Cy %f", cname.c_str(), cameraInfo.K[0], cameraInfo.K[4],
+             cameraInfo.K[2], cameraInfo.K[5]);
     copy(cameraInfo.D, camera_data.distortionCoeff);
     cameraInfo.D.resize(8);
 
@@ -286,10 +273,10 @@ bool DepthaiCameraInfoManager::loadCalibrationFlash(const std::string &flashURL,
     if(cameraInfo.width == 0) cameraInfo.width = 224;
     assert(cname != "");
     cameraInfo.header.frame_id = cname;
-    cameraInfo.header.stamp = ros::Time::now();
-    cameraInfo.header.seq = 1;
+    cameraInfo.header.stamp = ros_impl::now(nh_);
+    //cameraInfo.header.seq = 1;
 
-    transmit_eeprom(device, calibrationHandler);
+    transmit_eeprom(nh_, device, calibrationHandler);
 
     this->setCameraInfo(cameraInfo);
     return true;

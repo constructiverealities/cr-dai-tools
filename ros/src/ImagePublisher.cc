@@ -53,7 +53,7 @@ void yuv420_to_rgb(int width, int height, const uint8_t* yuv, uint8_t* rgb) {
     }
 }
 
-static void dai_to_rosimg(std::shared_ptr<dai::ImgFrame> daiImg, sensor_msgs::Image& rosImg) {
+static void dai_to_rosimg(const ros_impl::Node& n, std::shared_ptr<dai::ImgFrame> daiImg, ros_impl::sensor_msgs::Image& rosImg) {
     rosImg.width = daiImg->getWidth();
     rosImg.height = daiImg->getHeight();
     rosImg.data = daiImg->getData();
@@ -83,68 +83,89 @@ static void dai_to_rosimg(std::shared_ptr<dai::ImgFrame> daiImg, sensor_msgs::Im
             nv12_to_rgb(rosImg.width, rosImg.height, daiImg->getData().data(), rosImg.data.data());
             break;
         default:
-            ROS_WARN("Do not understand dai type %d", (int)daiImg->getType());
+            ROS_IMPL_WARN(n, "Do not understand dai type %d", (int)daiImg->getType());
     }
 
     rosImg.step = rosImg.data.size() / rosImg.height;
 }
 
 cr::dai_rosnode::ImagePublisher::ImagePublisher(std::shared_ptr<dai::DataOutputQueue> daiMessageQueue,
-                                                const ros::NodeHandle& nh,
+                                                const ros_impl::Node& nh,
                                                 int queueSize,
-                                                const sensor_msgs::CameraInfo& cameraInfoData,
+                                                const ros_impl::sensor_msgs::CameraInfo& cameraInfoData,
                                                 std::shared_ptr<dai::node::XLinkOut> xlinkOut) :
         _cameraInfoData(cameraInfoData),
-        Publisher_<dai::ImgFrame, image_transport::CameraPublisher>(daiMessageQueue, nh, queueSize, xlinkOut) {
-    ROS_INFO("Creating image publisher for ns %s/%s", nh.getNamespace().c_str(), xLinkOut->getStreamName().c_str());
+        Publisher_<dai::ImgFrame, ros_impl::sensor_msgs::Image, std::shared_ptr<image_transport::CameraPublisher>>(daiMessageQueue, nh, queueSize, xlinkOut) {
+    ROS_IMPL_INFO(nh, "Creating image publisher for ns %s/%s", ros_impl::Namespace(nh), xLinkOut->getStreamName().c_str());
 }
 
 void cr::dai_rosnode::ImagePublisher::operator()(std::shared_ptr<dai::ImgFrame> inFrame) {
-    //ROS_WARN("Start %s", Name().c_str());
-    auto tstamp = inFrame->getTimestamp();
-    auto rosNow = ::ros::Time::now();
-    auto steadyTime = std::chrono::steady_clock::now();
-    auto diffTime = steadyTime - tstamp;
-    long int nsec = rosNow.toNSec() - diffTime.count();
-    auto rosStamp = rosNow.fromNSec(nsec);
+    try {
+        //pthread_setname_np(pthread_self(), Name().c_str());
+        //ROS_IMPL_INFO(_nh, "THread %s %p", Name().c_str(), pthread_self());
+        auto tstamp = inFrame->getTimestamp();
+        auto rosNow = ros_impl::now(_nh);
+        auto steadyTime = std::chrono::steady_clock::now();
+        auto diffTime = steadyTime - tstamp;
+#ifdef HAS_ROS2
+        long int nsec = rosNow.seconds() - diffTime.count();//rosNow.toNSec() - diffTime.count();
+#else
+        long int nsec = rosNow.toNSec() - diffTime.count();
+#endif
+        auto rosStamp = ros_impl::Time(nsec / 1000000000, nsec % 1000000000);
+        ros_impl::std_msgs::Header header;
+        header.frame_id = _cameraInfoData.header.frame_id;
+        //header.seq = inFrame->getSequenceNum();
+        header.stamp = rosStamp;
+        std::string encoding;
 
-    std_msgs::Header header;
-    header.frame_id = _cameraInfoData.header.frame_id;
-    header.seq = inFrame->getSequenceNum();
-    header.stamp = rosStamp;
-    std::string encoding;
+        //_cameraInfoData.header.seq = inFrame->getSequenceNum();
+        _cameraInfoData.header.stamp = rosStamp;
 
-    _cameraInfoData.header.seq = inFrame->getSequenceNum();
-    _cameraInfoData.header.stamp = rosStamp;
+        if (hasDataListeners()) {
+            ros_impl::sensor_msgs::Image imageBuffer;
+            dai_to_rosimg(_nh, inFrame, imageBuffer);
+            imageBuffer.header = header;
+            publisher->publish(imageBuffer, _cameraInfoData);
+        }
 
-    if(hasDataListeners()) {
-        sensor_msgs::Image imageBuffer;
-        dai_to_rosimg(inFrame, imageBuffer);
-        imageBuffer.header = header;
-        publisher.publish(imageBuffer, _cameraInfoData);
+#ifdef HAS_IDL_SUPPORT
+        cr_dai_ros::CameraMetadata msg;
+        msg.header = header;
+        msg.lens_position = inFrame->getLensPosition() < 0 ? -1 : (inFrame->getLensPosition() / 255.);
+        msg.exposure_time = inFrame->getExposureTime();
+        msg.category = inFrame->getCategory();
+        msg.sensitivity = inFrame->getSensitivity();
+        _cameraMetaPublisher->publish(msg);
+#endif
+        //ROS_WARN("Stop %s", Name().c_str());
+
+        auto now = dai::Clock::now();// std::chrono::high_resolution_clock::now();
+        auto ms_since = std::chrono::duration_cast<std::chrono::microseconds>(now - tstamp).count() / 1000.;
+        perf_latency += ms_since;
+
+        Publisher_::operator()(inFrame);
+    } catch(std::exception& e) {
+        ROS_IMPL_WARN(_nh, "What %s", e.what());
     }
-
-    cr_dai_ros::CameraMetadata msg;
-    msg.header = header;
-    msg.lens_position = inFrame->getLensPosition() < 0 ? -1 : (inFrame->getLensPosition() / 255.);
-    msg.exposure_time = inFrame->getExposureTime();
-    msg.category = inFrame->getCategory();
-    msg.sensitivity = inFrame->getSensitivity();
-    _cameraMetaPublisher.publish(msg);
-    //ROS_WARN("Stop %s", Name().c_str());
-
-    auto now = dai::Clock::now();// std::chrono::high_resolution_clock::now();
-    auto ms_since = std::chrono::duration_cast<std::chrono::microseconds>(now - tstamp).count() / 1000.;
-    perf_latency += ms_since;
-
-    Publisher_::operator()(inFrame);
 }
 
 void cr::dai_rosnode::ImagePublisher::Setup() {
-    _cameraMetaPublisher = _nh.advertise<cr_dai_ros::CameraMetadata>(Name() + "/camera_metadata", queueSize);
+#ifdef HAS_IDL_SUPPORT
+    _cameraMetaPublisher = ros_impl::create_publisher<cr_dai_ros::CameraMetadata>(_nh, Name() + "/camera_metadata", queueSize);
+#endif
+    //_cameraMetaPublisher = _nh.advertise<cr_dai_ros::CameraMetadata>(Name() + "/camera_metadata", queueSize);
 
+#if HAS_ROS2
     image_transport::ImageTransport it(_nh);
-    publisher = it.advertiseCamera(Name() + "/image", queueSize);
+#else
+    image_transport::ImageTransport it(*_nh);
+#endif
+    publisher = std::make_shared<image_transport::CameraPublisher>(std::move(it.advertiseCamera(std::string(ros_impl::Namespace(_nh)) + "/" + Name() + "/image", queueSize)));
     Publisher_::Setup();
+}
+
+bool cr::dai_rosnode::ImagePublisher::hasDataListeners() const {
+    return ros_impl::get_subscription_count(_nh, publisher);
 }
 

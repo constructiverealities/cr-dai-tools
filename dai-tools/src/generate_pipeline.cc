@@ -119,17 +119,24 @@ namespace cr {
         void PipelineBuilder::HandleStereo() {
             stereo_depth_node = std::shared_ptr<dai::node::StereoDepth>(pipeline->create<dai::node::StereoDepth>());
 
-            stereo_depth_node->initialConfig.setLeftRightCheckThreshold(45);
-            stereo_depth_node->initialConfig.setConfidenceThreshold(180);
+            stereo_depth_node->initialConfig.setLeftRightCheckThreshold(10);
+            stereo_depth_node->initialConfig.setConfidenceThreshold(220);
             stereo_depth_node->setLeftRightCheck(true);
             stereo_depth_node->setExtendedDisparity(false);
             stereo_depth_node->setSubpixel(true);
             stereo_depth_node->initialConfig.setMedianFilter(dai::MedianFilter::KERNEL_7x7);
             stereo_depth_node->setRuntimeModeSwitch(true);
 
-            auto xout = pipeline->create<dai::node::XLinkOut>();
-            xout->setStreamName("stereo_depth");
-            stereo_depth_node->depth.link(xout->input);
+            {
+                auto xout = pipeline->create<dai::node::XLinkOut>();
+                xout->setStreamName("stereo_depth");
+                stereo_depth_node->depth.link(xout->input);
+            }
+            {
+                auto xout = pipeline->create<dai::node::XLinkOut>();
+                xout->setStreamName("confidence_map");
+                stereo_depth_node->confidenceMap.link(xout->input);
+            }
         }
 
         void PipelineBuilder::Generate() {
@@ -138,6 +145,8 @@ namespace cr {
 
             auto calibrationData = device->readCalibration();
             auto eeprom = calibrationData.getEepromData();
+
+            HandleIMU();
 
             auto features = device->getConnectedCameraFeatures();
             if(eeprom.stereoRectificationData.leftCameraSocket != dai::CameraBoardSocket::AUTO &&
@@ -219,11 +228,12 @@ namespace cr {
 
 
         static std::string GetSaveDir() {
-            auto home = getenv("XDG_CONFIG_HOME");
+            const char* home = getenv("XDG_CONFIG_HOME");
             if(home && home[0]) return home;
 
             home = getenv("HOME");
-            if(home && home[0]) return std::string(home) + "/.local/share";
+            if(home && strcmp(home, "/") == 0) home = "";
+            if(home) return std::string(home) + "/.local/share";
 
             return "./";
         }

@@ -1,36 +1,33 @@
 #pragma once
 
-#include "ros/ros.h"
+#include "cr/dai-tools/ros_headers.h"
+
 #include <memory>
-#include <camera_info_manager/camera_info_manager.h>
-#include <image_transport/image_transport.h>
-#include <sensor_msgs/CameraInfo.h>
-#include <ros/console.h>
-#include <ros/ros.h>
 #include <depthai/device/DataQueue.hpp>
 #include <depthai/pipeline/node/XLinkOut.hpp>
 #include <depthai/utility/Clock.hpp>
 
 #include "depthai/pipeline/datatypes.hpp"
-#include "cr_dai_ros/CameraMetadata.h"
-#include "sensor_msgs/Image.h"
 
 #include "cr/dai-tools/Publisher.h"
 #include "cr/dai-tools/DepthAICameraInfoManager.hpp"
 
 namespace cr {
     namespace dai_rosnode {
-        class ImagePublisher : public Publisher_<dai::ImgFrame, image_transport::CameraPublisher> {
+    class ImagePublisher : public Publisher_<dai::ImgFrame, ros_impl::sensor_msgs::Image, std::shared_ptr<image_transport::CameraPublisher>> {
         protected:
-            ros::Publisher _cameraMetaPublisher;
-            sensor_msgs::CameraInfo _cameraInfoData;
+#ifdef HAS_IDL_SUPPORT
+            ros_impl::Publisher<cr_dai_ros::CameraMetadata> _cameraMetaPublisher;
+#endif
+            ros_impl::sensor_msgs::CameraInfo _cameraInfoData;
 
             void operator()(std::shared_ptr<dai::ImgFrame> msg) override;
+            bool hasDataListeners() const override;
         public:
             ImagePublisher(std::shared_ptr<dai::DataOutputQueue> daiMessageQueue,
-                           const ros::NodeHandle& nh,
+                           const ros_impl::Node& nh,
                            int queueSize,
-                           const sensor_msgs::CameraInfo& cameraInfoData,
+                           const ros_impl::sensor_msgs::CameraInfo& cameraInfoData,
                            std::shared_ptr<dai::node::XLinkOut>);
 
             void Setup() override;

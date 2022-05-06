@@ -2,14 +2,6 @@
 #include "cr/dai-tools/NodeWalker.h"
 #include "depthai/pipeline/Pipeline.hpp"
 
-#include <dynamic_reconfigure/server.h>
-#include <sensor_msgs/Image.h>
-#include <sensor_msgs/Imu.h>
-
-#include "cr_dai_ros/StereoDepthConfig.h"
-#include "cr_dai_ros/CameraControlConfig.h"
-#include "cr_dai_ros/DeviceControlConfig.h"
-
 #include "cr/dai-tools/ImagePublisher.h"
 #include "cr/dai-tools/ToFDepthPublisher.h"
 #include "cr/dai-tools/IMUPublisher.h"
@@ -27,90 +19,7 @@ namespace cr {
             }
             return frameNames;
         }
-
-        sensor_msgs::CameraInfo calibrationToCameraInfo1(dai::Device& _device,
-                dai::CalibrationHandler calibHandler, dai::CameraBoardSocket cameraId, int width, int height, dai::Point2f topLeftPixelId = {}, dai::Point2f bottomRightPixelId = {}) {
-            std::vector<std::vector<float>> camIntrinsics, rectifiedRotation;
-            std::vector<float> distCoeffs;
-            std::vector<double> flatIntrinsics, distCoeffsDouble;
-            int defWidth, defHeight;
-            sensor_msgs::CameraInfo cameraData = {};
-
-            try {
-                std::tie(std::ignore, defWidth, defHeight) = calibHandler.getDefaultIntrinsics(cameraId);
-
-                if(width == -1) {
-                    cameraData.width = static_cast<uint32_t>(defWidth);
-                } else {
-                    cameraData.width = static_cast<uint32_t>(width);
-                }
-
-                if(height == -1) {
-                    cameraData.height = static_cast<uint32_t>(defHeight);
-                } else {
-                    cameraData.height = static_cast<uint32_t>(height);
-                }
-
-                camIntrinsics = calibHandler.getCameraIntrinsics(cameraId, cameraData.width, cameraData.height, topLeftPixelId, bottomRightPixelId);
-
-                flatIntrinsics.resize(9);
-                for(int i = 0; i < 3; i++) {
-                    std::copy(camIntrinsics[i].begin(), camIntrinsics[i].end(), flatIntrinsics.begin() + 3 * i);
-                }
-            } catch(std::exception& exception) {
-                ROS_WARN("Failed to get cameraInfo for socket %d. Error: %s", (int)cameraId, exception.what());
-                return cameraData;
-            }
-
-            auto& intrinsics = cameraData.K;
-            auto& distortions = cameraData.D;
-            auto& projection = cameraData.P;
-            auto& rotation = cameraData.R;
-
-            std::copy(flatIntrinsics.begin(), flatIntrinsics.end(), intrinsics.begin());
-
-            distCoeffs = calibHandler.getDistortionCoefficients(cameraId);
-
-            for(size_t i = 0; i < 8; i++) {
-                distortions.push_back(static_cast<double>(distCoeffs[i]));
-            }
-
-            // Setting Projection matrix if the cameras are stereo pair. Right as the first and left as the second.
-            if(calibHandler.getStereoRightCameraId() != dai::CameraBoardSocket::AUTO && calibHandler.getStereoLeftCameraId() != dai::CameraBoardSocket::AUTO) {
-                if(calibHandler.getStereoRightCameraId() == cameraId || calibHandler.getStereoLeftCameraId() == cameraId) {
-                    std::vector<std::vector<float>> stereoIntrinsics = calibHandler.getCameraIntrinsics(
-                            calibHandler.getStereoRightCameraId(), cameraData.width, cameraData.height, topLeftPixelId, bottomRightPixelId);
-                    std::vector<double> stereoFlatIntrinsics(12), flatRectifiedRotation(9);
-                    for(int i = 0; i < 3; i++) {
-                        std::copy(stereoIntrinsics[i].begin(), stereoIntrinsics[i].end(), stereoFlatIntrinsics.begin() + 4 * i);
-                        stereoFlatIntrinsics[(4 * i) + 3] = 0;
-                    }
-
-                    if(calibHandler.getStereoLeftCameraId() == cameraId) {
-                        // This defines where the first camera is w.r.t second camera coordinate system giving it a translation to place all the points in the first
-                        // camera to second camera by multiplying that translation vector using transformation function.
-                        stereoFlatIntrinsics[3] = stereoFlatIntrinsics[0]
-                                                  * calibHandler.getCameraExtrinsics(calibHandler.getStereoRightCameraId(), calibHandler.getStereoLeftCameraId())[0][3]
-                                                  / 100.0;  // Converting to meters
-                        rectifiedRotation = calibHandler.getStereoLeftRectificationRotation();
-                    } else {
-                        rectifiedRotation = calibHandler.getStereoRightRectificationRotation();
-                    }
-
-                    for(int i = 0; i < 3; i++) {
-                        std::copy(rectifiedRotation[i].begin(), rectifiedRotation[i].end(), flatRectifiedRotation.begin() + 3 * i);
-                    }
-
-                    std::copy(stereoFlatIntrinsics.begin(), stereoFlatIntrinsics.end(), projection.begin());
-                    std::copy(flatRectifiedRotation.begin(), flatRectifiedRotation.end(), rotation.begin());
-                }
-            }
-            cameraData.distortion_model = "rational_polynomial";
-            cameraData.header.frame_id = "dai_" + _device.getMxId() + "_" + default_frame_mapping()[cameraId];
-
-            return cameraData;
-        }
-
+        
         struct SetupPostStart : public cr::dai_tools::NodeWalker {
             PipelinePublisher* self = 0;
             SetupPostStart(PipelinePublisher* self) : self(self) {}
@@ -128,19 +37,20 @@ namespace cr {
             }
         };
 
-        PipelinePublisher::PipelinePublisher(::ros::NodeHandle& pnh,
+        PipelinePublisher::PipelinePublisher(::ros_impl::Node& pnh,
                                              std::shared_ptr<dai::Device> device,
                                              dai::Pipeline& pipeline)
-                : _pnh(pnh), _device(*device), metaInfo(device) {
+                : _device_node(pnh), _device(*device), metaInfo(device) {
             _calibrationHandler = device->readCalibration();
             BuildPublisherFromPipeline(pipeline);
         }
 
         void PipelinePublisher::setupCameraControlServer(std::shared_ptr<dai::node::StereoDepth> stereo, const std::string& prefix) {
-            ros::NodeHandle n(_pnh, "stereo");
-            ROS_INFO("Setting up stereo control server for %s", n.getNamespace().c_str());
+#ifdef HAS_DYNAMIC_RECONFIGURE
+            auto n = ros_impl::make_node(_device_node, "stereo");
+            ROS_IMPL_INFO(_device_node, "Setting up stereo control server for %s", ros_impl::Namespace(n));
             auto configQueue = _device.getInputQueue(prefix + "Config");
-            auto server = std::make_shared<dynamic_reconfigure::Server<cr_dai_ros::StereoDepthConfig>>(n);
+            auto server = std::make_shared<dynamic_reconfigure::Server<cr_dai_ros::StereoDepthConfig>>(*n);
             cr_dai_ros::StereoDepthConfig def_config = { };
             def_config.left_right_check = stereo->initialConfig.getLeftRightCheckThreshold() > 0; // No getter for this; just check threshold??
             def_config.confidence = stereo->initialConfig.getConfidenceThreshold();
@@ -169,12 +79,13 @@ namespace cr {
                 configQueue->send(dcfg);
             });
             keep_alive.push_back(server);
+#endif
         }
 
         void PipelinePublisher::BuildPublisherFromPipeline(dai::Pipeline& pipeline) {
             setupDeviceServer();
-
-            if(!_device.isPipelineRunning()) {
+            bool needsPipelineStart = !_device.isPipelineRunning();
+            if(needsPipelineStart) {
                 for(auto& node : pipeline.getAllNodes()) {
                     addConfigNodes(pipeline, node);
                 }
@@ -184,7 +95,7 @@ namespace cr {
                 SetupPostStart walker(this);
                 walker.VisitAll(pipeline.getAllNodes());
             } else {
-                ROS_WARN("Device is running already, PipelinePublisher can not add configuration servers");
+                ROS_IMPL_WARN(_device_node, "Device is running already, PipelinePublisher can not add configuration servers");
             }
 
             auto connections = pipeline.getConnectionMap();
@@ -193,7 +104,10 @@ namespace cr {
                 if(auto xlinkOut = std::dynamic_pointer_cast<dai::node::XLinkOut>(node)) {
                     for(auto& nodeConnection : connection.second) {
                         auto otherNode = pipeline.getNode(nodeConnection.outputId);
-                        StartVisit(SetupPublishers(), xlinkOut, nodeConnection.outputName, otherNode);
+                        bool handled = StartVisit(SetupPublishers(), xlinkOut, nodeConnection.outputName, otherNode);
+                        if(!handled) {
+                            ROS_IMPL_WARN(_device_node, "Could not map xlinkout named %s", nodeConnection.outputName.c_str());
+                        }
                     }
                 }
             }
@@ -201,19 +115,22 @@ namespace cr {
 
 
         template<typename T> void PipelinePublisher::setupCameraControlQueue(std::shared_ptr<T> cam, const std::string& prefix) {
+#ifdef HAS_DYNAMIC_RECONFIGURE
             auto configIn = cam->getParentPipeline().template create<dai::node::XLinkIn>();
             auto name = prefix + std::to_string((int)cam->getBoardSocket());
-            ROS_INFO("Setting up camera control xlinks for %s", name.c_str());
+            ROS_IMPL_INFO(_device_node,"Setting up camera control xlinks for %s", name.c_str());
             configIn->setStreamName(name + "_inputControl");
             configIn->out.link(cam->inputControl);
+#endif
         }
 
         void PipelinePublisher::setupCameraControlServer(dai::CameraBoardSocket socket, const std::string& prefix) {
+#ifdef HAS_DYNAMIC_RECONFIGURE
             auto name = prefix + std::to_string((int)socket);
-            ROS_INFO("Setting up camera control server for %s", name.c_str());
+            ROS_IMPL_INFO(_device_node, "Setting up camera control server for %s", name.c_str());
             auto configQueue = _device.getInputQueue(name + "_inputControl");
             auto n = getNodeHandle(socket);
-            auto server = std::make_shared<dynamic_reconfigure::Server<cr_dai_ros::CameraControlConfig>>(n);
+            auto server = std::make_shared<dynamic_reconfigure::Server<cr_dai_ros::CameraControlConfig>>(*n);
 
             auto current_config = std::make_shared<cr_dai_ros::CameraControlConfig>();
             server->getConfigDefault(*current_config);
@@ -254,6 +171,7 @@ namespace cr {
             });
 
             keep_alive.push_back(server);
+#endif
         }
         template <typename T>
         void PipelinePublisher::setupCameraControlServer(std::shared_ptr<T> cam, const std::string& prefix) {
@@ -262,10 +180,12 @@ namespace cr {
 
         void PipelinePublisher::addConfigNodes(dai::Pipeline& pipeline, std::shared_ptr<dai::Node> node) {
             if(auto stereo = std::dynamic_pointer_cast<dai::node::StereoDepth>(node)) {
-                ROS_INFO("Setting up camera control xlinks for stereo");
+#ifdef HAS_DYNAMIC_RECONFIGURE
+                ROS_IMPL_INFO(_device_node, "Setting up camera control xlinks for stereo");
                 auto configIn = pipeline.create<dai::node::XLinkIn>();
                 configIn->setStreamName("stereoConfig");
                 configIn->out.link(stereo->inputConfig);
+#endif
             } else if(auto rgb = std::dynamic_pointer_cast<dai::node::ColorCamera>(node)) {
                 setupCameraControlQueue(rgb, "rgb");
             }
@@ -275,10 +195,10 @@ namespace cr {
         }
         bool PipelinePublisher::Visit(SetupPublishers, std::shared_ptr<dai::node::XLinkOut> xLinkOut,
                    const std::string& inputName, std::shared_ptr<dai::node::NeuralNetwork> ptr) {
-            auto queue = _device.getOutputQueue(xLinkOut->getStreamName(), 30, false);
+            auto queue = _device.getOutputQueue(xLinkOut->getStreamName(), 4, false);
             make_publisher<NNPublisher>(
                     queue,
-                    _pnh,
+                    _device_node,
                     30,
                     xLinkOut);
             return true;
@@ -286,10 +206,10 @@ namespace cr {
         }
         bool PipelinePublisher::Visit(SetupPublishers, std::shared_ptr<dai::node::XLinkOut> xLinkOut,
                    const std::string& inputName, std::shared_ptr<dai::node::IMU> inputNode) {
-            auto queue = _device.getOutputQueue(xLinkOut->getStreamName(), 30, false);
+            auto queue = _device.getOutputQueue(xLinkOut->getStreamName(), 4, false);
             make_publisher<IMUPublisher>(
                     queue,
-                    _pnh,
+                    _device_node,
                     30,
                     xLinkOut);
             return true;
@@ -297,9 +217,9 @@ namespace cr {
 
         bool PipelinePublisher::Visit(SetupPublishers, std::shared_ptr<dai::node::XLinkOut> xLinkOut,
                    const std::string& inputName, std::shared_ptr<dai::node::Camera> inputNode) {
-            auto queue = _device.getOutputQueue(xLinkOut->getStreamName(), 30, false);
+            auto queue = _device.getOutputQueue(xLinkOut->getStreamName(), 4, false);
 
-            sensor_msgs::CameraInfo rawCameraInfo;
+            ros_impl::sensor_msgs::CameraInfo rawCameraInfo;
             make_publisher<ImagePublisher>(
                     queue,
                     getNodeHandle(inputNode->getBoardSocket()),
@@ -312,7 +232,7 @@ namespace cr {
 
         bool PipelinePublisher::Visit(SetupPublishers, std::shared_ptr<dai::node::XLinkOut> xLinkOut,
                    const std::string& inputName, std::shared_ptr<dai::node::ToF> inputNode) {
-            auto queue = _device.getOutputQueue(xLinkOut->getStreamName(), 30, false);
+            auto queue = _device.getOutputQueue(xLinkOut->getStreamName(), 4, false);
 
             int width = 224, height = 172;
             auto socket = dai::CameraBoardSocket::RGB;
@@ -335,7 +255,7 @@ namespace cr {
 
         bool PipelinePublisher::Visit(SetupPublishers, std::shared_ptr<dai::node::XLinkOut> xLinkOut,
                                       const std::string &inputName, std::shared_ptr<dai::node::MonoCamera> inputNode) {
-            auto queue = _device.getOutputQueue(xLinkOut->getStreamName(), 30, false);
+            auto queue = _device.getOutputQueue(xLinkOut->getStreamName(), 4, false);
 
             int width = 1280, height = 720;
             width = inputNode->getResolutionWidth();
@@ -351,7 +271,7 @@ namespace cr {
         }
         bool PipelinePublisher::Visit(SetupPublishers, std::shared_ptr<dai::node::XLinkOut> xLinkOut,
                                       const std::string &inputName, std::shared_ptr<dai::node::ColorCamera> inputNode) {
-            auto queue = _device.getOutputQueue(xLinkOut->getStreamName(), 30, false);
+            auto queue = _device.getOutputQueue(xLinkOut->getStreamName(), 4, false);
 
             int width = 1280, height = 720;
             if(inputName == "video") {
@@ -367,7 +287,7 @@ namespace cr {
                 height = inputNode->getIspHeight();
                 width = inputNode->getIspWidth();
             } else {
-                ROS_WARN("Don't understand output named %s in ColorCamera. Using default image size for intrinsics", inputName.c_str());
+                ROS_IMPL_WARN (_device_node, "Don't understand output named %s in ColorCamera. Using default image size for intrinsics", inputName.c_str());
             }
 
             auto rgbCameraInfo = CameraInfo(inputNode->getBoardSocket(), width, height);
@@ -385,7 +305,7 @@ namespace cr {
                                       const std::string &inputName,
                                       std::shared_ptr<dai::node::StereoDepth> stereo) {
 
-            auto queue = _device.getOutputQueue(xLinkOut->getStreamName(), 30, false);
+            auto queue = _device.getOutputQueue(xLinkOut->getStreamName(), 4, false);
             auto alignSocket = stereo->properties.depthAlignCamera;
             if(alignSocket == dai::CameraBoardSocket::AUTO) {
                 alignSocket = dai::CameraBoardSocket::RIGHT;
@@ -396,7 +316,7 @@ namespace cr {
                 //converter = std::make_shared<ImageConverter>(_frame_prefix + frame, true);
                 make_publisher<ImagePublisher>(
                         queue,
-                        _pnh,
+                        _device_node,
                         30,
                         depthCameraInfo,
                         xLinkOut);
@@ -406,7 +326,7 @@ namespace cr {
 //                                                                             2000);  // TODO(sachin): undo hardcoding of baseline
 //                publisher = std::make_shared<dai::rosBridge::BridgePublisher<stereo_msgs::DisparityImage, dai::ImgFrame>>(
 //                        queue,
-//                        _pnh,
+//                        _device_node,
 //                        std::string("stereo/disparity"),
 //                        std::bind(&dai::rosBridge::DisparityConverter::toRosMsg, converter.get(), std::placeholders::_1,
 //                                  std::placeholders::_2),
@@ -418,7 +338,7 @@ namespace cr {
                 //converter = std::make_shared<ImageConverter>(_frame_prefix + frame, true);
                 make_publisher<ImagePublisher>(
                         queue,
-                        _pnh,
+                        _device_node,
                         30,
                         depthCameraInfo,
                         xLinkOut);
@@ -439,7 +359,7 @@ namespace cr {
                 }
 
                 if(!monoNode) {
-                    ROS_WARN("Could not get input source for %s on stereo node", side_name.c_str());
+                    ROS_IMPL_WARN (_device_node, "Could not get input source for %s on stereo node", side_name.c_str());
                     return true;
                 }
 
@@ -448,20 +368,21 @@ namespace cr {
                                                           monoNode->getResolutionHeight());
                 make_publisher<ImagePublisher>(
                         queue,
-                        _pnh,
+                        _device_node,
                         30,
                         cameraInfo,
                         xLinkOut);
             } else {
-                ROS_WARN("Don't understand output named %s in StereoDepth", inputName.c_str());
+                ROS_IMPL_WARN (_device_node, "Don't understand output named %s in StereoDepth", inputName.c_str());
             }
 
             return true;
         }
 
         void PipelinePublisher::setupDeviceServer() {
-            auto server = std::make_shared<dynamic_reconfigure::Server<cr_dai_ros::DeviceControlConfig>>(_pnh);
-            ROS_INFO("Setting up device server at %s",  _pnh.getNamespace().c_str());
+#ifdef HAS_DYNAMIC_RECONFIGURE
+            auto server = std::make_shared<dynamic_reconfigure::Server<cr_dai_ros::DeviceControlConfig>>(*_device_node);
+            ROS_INFO("Setting up device server at %s",  _device_node->getNamespace().c_str());
             auto current_config = std::make_shared<cr_dai_ros::DeviceControlConfig>();
             server->getConfigDefault(*current_config);
             keep_alive.push_back(current_config);
@@ -483,17 +404,18 @@ namespace cr {
             });
 
             keep_alive.push_back(server);
+#endif
         }
 
-        ::ros::NodeHandle &PipelinePublisher::getNodeHandle(dai::CameraBoardSocket socket) {
+        ::ros_impl::Node &PipelinePublisher::getNodeHandle(dai::CameraBoardSocket socket) {
             if(_nodeHandles.find(socket) == _nodeHandles.end()) {
                 auto ns = default_frame_mapping()[socket];
-                _nodeHandles[socket] = ::ros::NodeHandle(_pnh, ns);
+                _nodeHandles[socket] = ros_impl::make_node(_device_node, ns);
             }
             return _nodeHandles[socket];
         }
 
-        sensor_msgs::CameraInfo PipelinePublisher::CameraInfo(dai::CameraBoardSocket socket, int width, int height,
+        ros_impl::sensor_msgs::CameraInfo PipelinePublisher::CameraInfo(dai::CameraBoardSocket socket, int width, int height,
                                                               dai::Point2f topLeftPixelId,
                                                               dai::Point2f bottomRightPixelId) {
             auto manager = _cameraManagers[socket];
@@ -502,7 +424,7 @@ namespace cr {
                 auto cname = "dai_" + _device.getMxId() + "_" + ns;
                 _cameraManagers[socket] = manager = DepthaiCameraInfoManager::get(_device, _calibrationHandler, socket, getNodeHandle(socket), cname);
             }
-
+            //return ros_impl::sensor_msgs::CameraInfo();
             return manager->getCameraInfo();
         }
 

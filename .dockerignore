@@ -13,5 +13,8 @@
 **/*.map
 **/*.csv
 **/*.vxblx
-Dockerfile
+Dockerfile*
+docker-compose*
 README.md
+.git
+.github

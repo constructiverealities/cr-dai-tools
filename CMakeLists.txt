@@ -4,6 +4,9 @@ project(cr-dai-tools)
 set(CMAKE_CXX_STANDARD 17)
 include(CheckCXXSourceCompiles)
 
+#add_compile_options(-fsanitize=address)
+#add_link_options(-fsanitize=address)
+
 #set(SHARED_FLAGS "-fPIC -Wall -Wno-unused-variable -Wno-switch -Wno-parentheses -Wno-missing-braces -Werror=return-type -Werror=vla -fno-math-errno -Werror=pointer-arith")
 #
 #SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${SHARED_FLAGS} -std=gnu99 -Werror=incompatible-pointer-types -Werror=implicit-function-declaration ")

@@ -7,6 +7,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME_ROS2: ${{ github.repository }}-ROS2
 
 jobs:
   build-and-push-image:
@@ -32,6 +33,12 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
+      - name: Extract metadata (tags, labels) for Docker (ROS2)
+        id: meta_ros2
+        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_ROS2 }}
+
       - name: Build and push Docker image
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
         with:
@@ -39,3 +46,12 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Build and push Docker image (ROS2)
+        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
+        with:
+          context: .
+          dockerfile: Dockerfile.ros2
+          push: true
+          tags: ${{ steps.meta_ros2.outputs.tags }}
+          labels: ${{ steps.meta_ros2.outputs.labels }}

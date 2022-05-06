@@ -2,5 +2,5 @@
 set -e
 
 # setup ros environment
-source "/opt/ros/noetic/setup.bash"
+source "/opt/ros/$ROS_DISTRO/setup.bash"
 exec "$@"

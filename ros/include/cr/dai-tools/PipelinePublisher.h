@@ -1,8 +1,8 @@
-#include <sensor_msgs/CameraInfo.h>
+#include "cr/dai-tools/ros_headers.h"
+
 #include "depthai/device/Device.hpp"
 #include "depthai/pipeline/nodes.hpp"
 #include "cr/dai-tools/NodeWalker.h"
-#include "ros/ros.h"
 #include "cr/dai-tools/PipelineBuilder.h"
 #include "DepthAICameraInfoManager.hpp"
 
@@ -13,16 +13,16 @@ namespace cr {
         class PipelinePublisher : cr::dai_tools::NodeWalker_<SetupPublishers, std::shared_ptr<dai::node::XLinkOut>, const std::string&> {
             friend class SetupPostStart;
 
-            sensor_msgs::CameraInfo CameraInfo(dai::CameraBoardSocket cameraId, int width, int height, dai::Point2f topLeftPixelId = {}, dai::Point2f bottomRightPixelId = {});
-            ::ros::NodeHandle& _pnh;
+            ros_impl::sensor_msgs::CameraInfo CameraInfo(dai::CameraBoardSocket cameraId, int width, int height, dai::Point2f topLeftPixelId = {}, dai::Point2f bottomRightPixelId = {});
+            ros_impl::Node& _device_node;
             dai::Device& _device;
             std::string _frame_prefix;
 
             cr::dai_tools::DeviceMetaInfo metaInfo;
 
-            std::map<dai::CameraBoardSocket, ::ros::NodeHandle> _nodeHandles;
+            std::map<dai::CameraBoardSocket, ros_impl::Node> _nodeHandles;
             std::map<dai::CameraBoardSocket, std::shared_ptr<DepthaiCameraInfoManager>> _cameraManagers;
-            ::ros::NodeHandle& getNodeHandle(dai::CameraBoardSocket socket);
+            ros_impl::Node& getNodeHandle(dai::CameraBoardSocket socket);
 
             std::vector<std::shared_ptr<void>> keep_alive;
             dai::CalibrationHandler _calibrationHandler;
@@ -61,7 +61,7 @@ namespace cr {
 
         public:
             void BuildPublisherFromPipeline(dai::Pipeline& pipeline);
-            PipelinePublisher(::ros::NodeHandle& pnh, std::shared_ptr<dai::Device> device, dai::Pipeline& pipeline);
+            PipelinePublisher(ros_impl::Node& pnh, std::shared_ptr<dai::Device> device, dai::Pipeline& pipeline);
 
             void setupDeviceServer();
         };
