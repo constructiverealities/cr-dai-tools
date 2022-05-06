@@ -1,11 +1,33 @@
 cmake_minimum_required(VERSION 3.10)
-project(cr_dai_ros)
+
+option(BUILD_DEPTHAI "Build all relevant dependencies" OFF)
+
+include(FetchContent)
+if(BUILD_DEPTHAI)
+    # FetchContent_Declare(
+    #       opencv
+    #       GIT_REPOSITORY https://github.com/opencv/opencv.git
+    #       GIT_TAG        4.4.0
+    # 	)
+
+    FetchContent_Declare(
+            depthai-core
+            GIT_REPOSITORY https://github.com/luxonis/depthai-core.git
+            GIT_TAG tof_rgb_mono
+    )
+
+    #FetchContent_MakeAvailable(opencv)
+    FetchContent_MakeAvailable(depthai-core)
+    project(cr_dai_ros)
+else()
+    project(cr_dai_ros)
+    find_package(depthai REQUIRED)
+endif()
 
 cmake_policy(SET CMP0057 NEW)
 
 set(CMAKE_CXX_STANDARD 17)
 
-find_package(depthai REQUIRED)
 if(NOT TARGET cr-dai-tools)
     message("Building as catkin workspace; adding tools dir")
     add_subdirectory(../dai-tools dai-tools)
@@ -120,7 +142,7 @@ if(ament_cmake_FOUND)
     ament_export_libraries(depthai_bridge)
     ament_export_dependencies(${dependencies})
 
-    ament_target_dependencies(autonode cv_bridge
+    ament_target_dependencies(cr-dai-rosnode-lib cv_bridge
             image_transport
             rclcpp
             sensor_msgs tf2 tf2_ros

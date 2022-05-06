@@ -17,11 +17,11 @@ RUN git clone -v https://github.com/libusb/libusb.git /repos/libusb && \
     rm -rf /repos/libusb
 
 ADD https://api.github.com/repos/luxonis/depthai-core/branches/tof_rgb_mono cache-check
-RUN --mount=type=ssh --mount=type=cache,target=/root/.hunter  \
-    git clone --recursive --branch tof_rgb_mono https://github.com/luxonis/depthai-core.git /repos/depthai_core && \
-    mkdir -p /build/depthai-core && \
-    cd /build/depthai-core && cmake -DDEPTHAI_BUILD_EXAMPLES=OFF -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=On /repos/depthai_core && make -j4 install && \
-    rm -rf /repos /build
+#RUN --mount=type=ssh --mount=type=cache,target=/root/.hunter  \
+#    git clone --recursive --branch tof_rgb_mono https://github.com/luxonis/depthai-core.git /repos/depthai_core && \
+#    mkdir -p /build/depthai-core && \
+#    cd /build/depthai-core && cmake -DDEPTHAI_BUILD_EXAMPLES=OFF -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=On /repos/depthai_core && make -j4 install && \
+#    rm -rf /repos /build
 
 ADD . /ros_ws/src/cr-dai-tools
 
@@ -29,7 +29,7 @@ ADD . /ros_ws/src/cr-dai-tools
 SHELL ["/bin/bash", "-c"]
 ENV PYTHONUNBUFFERED 1
 
-RUN source /opt/ros/$ROS_DISTRO/setup.bash && cd /ros_ws && colcon build --merge-install --paths src/**/* --install-base /opt/ros/$ROS_DISTRO 
+RUN source /opt/ros/$ROS_DISTRO/setup.bash && cd /ros_ws && colcon build --merge-install --paths=src/**/ros --install-base /opt/ros/$ROS_DISTRO --cmake-args -DBUILD_DEPTHAI=ON
 
 ENV ROS_DISTRO=$ROS_DISTRO
 ADD entrypoint.sh /

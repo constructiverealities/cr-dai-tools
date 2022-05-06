@@ -1,7 +1,9 @@
 
 set(CMAKE_CXX_STANDARD 17)
 
-find_package(depthai REQUIRED)
+if(NOT TARGET depthai::core)
+    find_package(depthai REQUIRED)
+endif()
 
 include_directories(${depthai_INCLUDE_DIRS} dai-tools/include)
 add_library(cr-dai-tools STATIC src/cr-dai-tools.cc src/generate_pipeline.cc)

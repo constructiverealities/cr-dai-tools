@@ -10,6 +10,31 @@ env:
   IMAGE_NAME_ROS2: ${{ github.repository }}-ROS2
 
 jobs:
+  build-and-push-release:
+    runs-on: windows-2019
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: ros-tooling/setup-ros@v0.3
+        with:
+          required-ros-distributions: foxy
+      - uses: ros-tooling/action-ros-ci@v0.2
+        with:
+          target-ros2-distro: foxy
+          colcon-extra-args: --paths=src/**/ros
+          package-name: cr_dai_ros
+          extra-cmake-args: -DBUILD_DEPTHAI=ON
+          colcon-defaults: |
+            {
+              "build": {            
+                "cmake-args": [
+                    "-DBUILD_DEPTHAI=ON"
+                ]
+              }
+            }
+
   build-and-push-image:
     runs-on: ubuntu-latest
     permissions:
@@ -26,6 +51,14 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
@@ -51,7 +84,7 @@ jobs:
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
         with:
           context: .
-          dockerfile: Dockerfile.ros2
+          file: Dockerfile.ros2
           push: true
           tags: ${{ steps.meta_ros2.outputs.tags }}
           labels: ${{ steps.meta_ros2.outputs.labels }}
