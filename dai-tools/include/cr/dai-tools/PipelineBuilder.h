@@ -59,6 +59,7 @@ namespace cr {
             virtual void HandleOV9_82(const CameraFeatures& features);
 
             virtual void HandleToF(const CameraFeatures& features);
+            virtual void HandleRaw(const CameraFeatures& features);
             virtual void HandleColor(const CameraFeatures& features);
             virtual void HandleMono(const CameraFeatures& features);
 

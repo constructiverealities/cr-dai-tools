@@ -82,6 +82,16 @@ namespace cr {
             mono->out.link(xoutVideo->input);
         }
 
+        void PipelineBuilder::HandleRaw(const CameraFeatures& features) {
+            auto xinPicture = pipeline->create<dai::node::Camera>();
+            xinPicture->setBoardSocket(features.socket);
+
+            auto xoutVideo = pipeline->create<dai::node::XLinkOut>();
+            xoutVideo->setStreamName("raw");
+            xinPicture->raw.link(xoutVideo->input);
+            printf("Creating raw camera on socket %d\n", (int)features.socket);
+        }
+
         void PipelineBuilder::HandleToF(const CameraFeatures &features) {
             auto xinPicture = pipeline->create<dai::node::Camera>();
             xinPicture->setBoardSocket(features.socket);
@@ -190,7 +200,7 @@ namespace cr {
         }
 
         void PipelineBuilder::HandleUnknown(const std::string &name, const CameraFeatures &features) {
-            std::cerr << "Don't recognize sensor '" << name << "'." << std::endl;
+            std::cerr << "Don't recognize sensor '" << name << "'..." << std::endl;
             if(features.supportedTypes.size() == 1) {
                 switch(features.supportedTypes[0]) {
                     case dai::CameraSensorType::COLOR:
@@ -203,10 +213,12 @@ namespace cr {
                         HandleToF(features);
                         break;
                     case dai::CameraSensorType::THERMAL:
+                        HandleRaw(features);
                         break;
                 }
             } else {
-                std::cerr << "Sensor '" << name << "' has more than one supported camera type; ignoring" << std::endl;
+                std::cerr << "Sensor '" << name << "' has more than one supported camera type; mapping as raw" << std::endl;
+                HandleRaw(features);
             }
         }
 
