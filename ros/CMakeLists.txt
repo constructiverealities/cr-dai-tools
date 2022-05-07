@@ -1,28 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-
-option(BUILD_DEPTHAI "Build all relevant dependencies" OFF)
-
-include(FetchContent)
-if(BUILD_DEPTHAI)
-    # FetchContent_Declare(
-    #       opencv
-    #       GIT_REPOSITORY https://github.com/opencv/opencv.git
-    #       GIT_TAG        4.4.0
-    # 	)
-
-    FetchContent_Declare(
-            depthai-core
-            GIT_REPOSITORY https://github.com/luxonis/depthai-core.git
-            GIT_TAG tof_rgb_mono
-    )
-
-    #FetchContent_MakeAvailable(opencv)
-    FetchContent_MakeAvailable(depthai-core)
-    project(cr_dai_ros)
-else()
-    project(cr_dai_ros)
-    find_package(depthai REQUIRED)
-endif()
+project(cr_dai_ros)
 
 cmake_policy(SET CMP0057 NEW)
 
@@ -33,7 +10,11 @@ if(NOT TARGET cr-dai-tools)
     add_subdirectory(../dai-tools dai-tools)
 endif()
 
-find_package(catkin COMPONENTS roscpp rosbag sensor_msgs cv_bridge tf camera_info_manager image_transport tf2 catkin
+if(NOT TARGET depthai::core)
+    find_package(depthai REQUIRED)
+endif()
+
+find_package(catkin COMPONENTS roscpp rosbag sensor_msgs  tf camera_info_manager image_transport tf2 catkin
         dynamic_reconfigure geometry_msgs std_msgs message_generation tf2_ros)
 
 find_package(ament_cmake)
@@ -52,12 +33,12 @@ if(ament_cmake_FOUND)
     find_package(tf2_ros REQUIRED)
 
 
-    find_package(cv_bridge REQUIRED)
+    find_package( REQUIRED)
     find_package(image_transport REQUIRED)
     find_package(sensor_msgs REQUIRED)
     find_package(stereo_msgs REQUIRED)
     find_package(std_msgs REQUIRED)
-    find_package(vision_msgs REQUIRED)
+
     find_package(camera_info_manager REQUIRED)
 
     include_directories(${ament_INCLUDE_DIRS}})
@@ -72,14 +53,14 @@ if(ament_cmake_FOUND)
 #            LIBRARY_NAME ${PROJECT_NAME}
 #    )
 
-    ament_export_dependencies(rosidl_default_runtime cv_bridge
+    ament_export_dependencies(rosidl_default_runtime 
             image_transport
             rclcpp
             sensor_msgs
             stereo_msgs
             std_msgs
             tf2 tf2_ros
-            vision_msgs camera_info_manager)
+            camera_info_manager)
 
     add_compile_options(-DHAS_ROS2=1)
 elseif(catkin_FOUND)
@@ -142,13 +123,13 @@ if(ament_cmake_FOUND)
     ament_export_libraries(depthai_bridge)
     ament_export_dependencies(${dependencies})
 
-    ament_target_dependencies(cr-dai-rosnode-lib cv_bridge
+    ament_target_dependencies(cr-dai-rosnode-lib 
             image_transport
             rclcpp
             sensor_msgs tf2 tf2_ros
             stereo_msgs
             std_msgs
-            vision_msgs camera_info_manager)
+            camera_info_manager)
 
     #rosidl_target_interfaces(DepthaiCameraInfoManager cr_dai_ros "rosidl_typesupport_cpp")
     #rosidl_target_interfaces(autonode ${PROJECT_NAME} rosidl_typesupport_cpp)

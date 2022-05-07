@@ -1,22 +1,46 @@
 cmake_minimum_required(VERSION 3.10)
-project(cr-dai-tools)
+
+option(ROS_BUILD "Build in a ros workspace" OFF)
+option(BUILD_DEPTHAI "Build all relevant dependencies" ${ROS_BUILD})
+
+include(FetchContent)
+if(BUILD_DEPTHAI)
+    MESSAGE("Building depthai locally...")
+    # FetchContent_Declare(
+    #       opencv
+    #       GIT_REPOSITORY https://github.com/opencv/opencv.git
+    #       GIT_TAG        4.4.0
+    # 	)
+
+    FetchContent_Declare(
+            depthai-core
+            GIT_REPOSITORY https://github.com/luxonis/depthai-core.git
+            GIT_TAG tof_rgb_mono
+    )
+
+    #FetchContent_MakeAvailable(opencv)
+    FetchContent_MakeAvailable(depthai-core)
+    project(cr-dai-tools)
+else()
+    project(cr-dai-tools)
+    find_package(depthai REQUIRED)
+endif()
+
 
 set(CMAKE_CXX_STANDARD 17)
 include(CheckCXXSourceCompiles)
 
 #add_compile_options(-fsanitize=address)
 #add_link_options(-fsanitize=address)
-
-#set(SHARED_FLAGS "-fPIC -Wall -Wno-unused-variable -Wno-switch -Wno-parentheses -Wno-missing-braces -Werror=return-type -Werror=vla -fno-math-errno -Werror=pointer-arith")
-#
-#SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${SHARED_FLAGS} -std=gnu99 -Werror=incompatible-pointer-types -Werror=implicit-function-declaration ")
-#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SHARED_FLAGS} -std=c++14")
-
-find_package(depthai REQUIRED)
-add_subdirectory(dai-tools)
+message("Building with ${ROS_BUILD}")
+if(NOT ROS_BUILD)
+    add_subdirectory(dai-tools)
+endif()
 add_subdirectory(ros)
 
-add_executable(cr-dai-example ./apps/example.cc)
-target_link_libraries(cr-dai-example cr-dai-tools)
+if(NOT ROS_BUILD)
+    add_executable(cr-dai-example ./apps/example.cc)
+    target_link_libraries(cr-dai-example cr-dai-tools)
 
-install(TARGETS cr-dai-example DESTINATION bin)
+    install(TARGETS cr-dai-example DESTINATION bin)
+endif()
