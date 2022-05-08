@@ -204,7 +204,7 @@ namespace ros_impl {
 
     template<typename CallbackT>
     static inline auto create_wall_timer(const Node& node, double period, CallbackT callback) {
-        return node->template create_wall_timer(std::chrono::milliseconds (int(1000*period)), [=]() {
+        return node->create_wall_timer(std::chrono::milliseconds (int(1000*period)), [=]() {
             callback();
         });
     }

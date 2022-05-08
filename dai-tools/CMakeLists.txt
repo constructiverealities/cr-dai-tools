@@ -7,9 +7,12 @@ if(NOT TARGET depthai::core)
   find_package(depthai REQUIRED)
 endif()
 
-add_library(cr-dai-tools STATIC src/cr-dai-tools.cc src/generate_pipeline.cc)
-target_link_libraries(cr-dai-tools depthai::core yaml-cpp)
+find_package(yaml-cpp REQUIRED)
+include_directories(${YAML_CPP_INCLUDE_DIR})
 
+add_library(cr-dai-tools STATIC src/cr-dai-tools.cc src/generate_pipeline.cc)
+target_link_libraries(cr-dai-tools depthai::core ${YAML_CPP_LIBRARIES})
+ 
 target_include_directories(cr-dai-tools PUBLIC include ${depthai_INCLUDE_DIRS})
 
 install(TARGETS cr-dai-tools

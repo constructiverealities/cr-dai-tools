@@ -3,6 +3,7 @@
 
 #include "cr/dai-tools/PipelineBuilder.h"
 #include "yaml-cpp/yaml.h"
+#include <typeinfo>
 
 #include <filesystem>
 
@@ -98,7 +99,8 @@ namespace cr {
             auto tof = pipeline->create<dai::node::ToF>();
             metaInfo.SensorInfo[features.socket] = SensorMetaInfo("MTP006", dai::CameraSensorType::TOF, 30, dai::CameraProperties::SensorResolution::THE_400_P);
 
-            std::list<std::pair<std::string, typeof(tof->out) *>> outs = {
+            using output_t = decltype(&tof->out);
+            std::list<std::pair<std::string, output_t>> outs = {
                     {"depth",     &tof->out},
                     {"amplitude", &tof->amp_out},
                     {"raw", &xinPicture->raw},

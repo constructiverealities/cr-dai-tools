@@ -40,7 +40,7 @@ namespace cr {
             {
                 auto publisher = std::make_shared<Tp>(args...);
                 publisher->Setup();
-                keep_alive.template emplace_back(publisher);
+                keep_alive.emplace_back(publisher);
                 return publisher;
             }
 

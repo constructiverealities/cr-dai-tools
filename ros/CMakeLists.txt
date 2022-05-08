@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(cr_dai_ros)
+
 
 cmake_policy(SET CMP0057 NEW)
 
@@ -9,7 +9,7 @@ if(NOT TARGET cr-dai-tools)
     message("Building as catkin workspace; adding tools dir")
     add_subdirectory(../dai-tools dai-tools)
 endif()
-
+project(cr_dai_ros)
 if(NOT TARGET depthai::core)
     find_package(depthai REQUIRED)
 endif()
@@ -32,8 +32,6 @@ if(ament_cmake_FOUND)
     find_package(tf2 REQUIRED)
     find_package(tf2_ros REQUIRED)
 
-
-    find_package( REQUIRED)
     find_package(image_transport REQUIRED)
     find_package(sensor_msgs REQUIRED)
     find_package(stereo_msgs REQUIRED)
@@ -101,7 +99,7 @@ if(BUILD_ROS)
     include_directories(include)
     include_directories(${catkin_INCLUDE_DIRS})
     include_directories(${cr_dai_ros_INCLUDE_DIRS})
-
+    add_compile_options(-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)
     add_library(cr-dai-rosnode-lib STATIC src/PipelinePublisher.cc src/ImagePublisher.cc src/ToFDepthPublisher.cc src/IMUPublisher.cc src/NNPublisher.cc ./src/DepthAICameraInfoManager.cpp ./src/virtual_camera_info_manager.cc ./src/ros_impl.cc)
     target_link_libraries(cr-dai-rosnode-lib cr-dai-tools ${catkin_LIBRARIES} depthai::core)
     target_include_directories(cr-dai-rosnode-lib PUBLIC include ${depthai_INCLUDE_DIRS})
