@@ -7,18 +7,21 @@ if(NOT TARGET depthai::core)
   find_package(depthai REQUIRED)
 endif()
 
-find_package(yaml-cpp QUIET)
+if(NOT TARGET yaml-cpp)
+  MESSAGE("Searching for yaml")
+  find_package(yaml-cpp QUIET)
+  if(NOT TARGET yaml-cpp)
+    include(FetchContent)
+    MESSAGE("Getting yaml")
+    FetchContent_Declare(
+            yaml-cpp
+            GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+            GIT_TAG yaml-cpp-0.7.0
+    )
 
-if(NOT yaml_cpp_FOUND)
-  FetchContent_Declare(
-          yaml-cpp
-          GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
-          GIT_TAG yaml-cpp-0.7.0
-  )
-
-  #FetchContent_MakeAvailable(opencv)
-  FetchContent_MakeAvailable(yaml-cpp)
-  set(YAML_CPP_LIBRARIES yaml-cpp)
+    FetchContent_MakeAvailable(yaml-cpp)
+    set(YAML_CPP_LIBRARIES yaml-cpp)
+  endif()
 endif()
 
 include_directories(${YAML_CPP_INCLUDE_DIR})

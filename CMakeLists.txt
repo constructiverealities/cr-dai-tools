@@ -32,7 +32,6 @@ include(CheckCXXSourceCompiles)
 
 #add_compile_options(-fsanitize=address)
 #add_link_options(-fsanitize=address)
-message("Building with ${ROS_BUILD}")
 if(NOT ROS_BUILD)
     add_subdirectory(dai-tools)
 endif()

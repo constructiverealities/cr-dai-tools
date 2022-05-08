@@ -14,7 +14,7 @@ if(NOT TARGET depthai::core)
     find_package(depthai REQUIRED)
 endif()
 
-find_package(catkin COMPONENTS roscpp rosbag sensor_msgs  tf camera_info_manager image_transport tf2 catkin
+find_package(catkin COMPONENTS roscpp sensor_msgs  tf camera_info_manager image_transport tf2 catkin
         dynamic_reconfigure geometry_msgs std_msgs message_generation tf2_ros)
 
 find_package(ament_cmake)
@@ -63,7 +63,7 @@ if(ament_cmake_FOUND)
     add_compile_options(-DHAS_ROS2=1)
 elseif(catkin_FOUND)
     SET(BUILD_ROS ON)
-    message("Building ROS tools...")
+    message("Building ROS tools... ${catkin_INCLUDE_DIRS}")
 
     add_message_files (
             FILES
@@ -102,7 +102,7 @@ if(BUILD_ROS)
     add_compile_options(-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)
     add_library(cr-dai-rosnode-lib STATIC src/PipelinePublisher.cc src/ImagePublisher.cc src/ToFDepthPublisher.cc src/IMUPublisher.cc src/NNPublisher.cc ./src/DepthAICameraInfoManager.cpp ./src/virtual_camera_info_manager.cc ./src/ros_impl.cc)
     target_link_libraries(cr-dai-rosnode-lib cr-dai-tools ${catkin_LIBRARIES} depthai::core)
-    target_include_directories(cr-dai-rosnode-lib PUBLIC include ${depthai_INCLUDE_DIRS})
+    target_include_directories(cr-dai-rosnode-lib PUBLIC include ${depthai_INCLUDE_DIRS} ${cr_dai_ros_INCLUDE_DIRS})
 
     if(NOT "${cr_dai_ros_EXPORTED_TARGETS}" STREQUAL "")
         add_dependencies(cr-dai-rosnode-lib ${cr_dai_ros_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -111,9 +111,11 @@ if(BUILD_ROS)
     add_executable(autonode apps/autonode.cc)
     target_link_libraries(autonode cr-dai-rosnode-lib cr-dai-tools)
 
-    install(TARGETS autonode
-            DESTINATION bin)
-
+    install(TARGETS autonode cr-dai-rosnode-lib
+            RUNTIME DESTINATION bin
+            LIBRARY DESTINATION lib
+            PUBLIC_HEADER DESTINATION include
+            )
 endif()
 
 if(ament_cmake_FOUND)
