@@ -10,33 +10,49 @@ env:
   IMAGE_NAME_ROS2: ${{ github.repository }}-ROS2
 
 jobs:
-  build-and-push-release:
+  build-and-push-ros-releases:
+    strategy:
+      matrix:
+        ros-distro: [ foxy, noetic ]
     runs-on: windows-2019
     permissions:
       contents: read
       packages: write
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
       - uses: ros-tooling/setup-ros@v0.3
+        if: ${{ matrix.ros-distro  == 'foxy' }}
         with:
-          required-ros-distributions: foxy
-      - uses: crazy-max/ghaction-chocolatey@v1
-        with:
-          args: source add -n=ros-win -s="https://aka.ms/ros/public" --priority=1
-      - uses: ros-tooling/action-ros-ci@v0.2
-        with:
-          target-ros2-distro: foxy
-          package-name: cr-dai-tools
-          extra-cmake-args: -DROS_BUILD=ON
-          vcs-repo-file-url: https://raw.githubusercontent.com/ros2/ros2/foxy/ros2.repos
-          colcon-defaults: |
-            {
-              "build": {            
-                "cmake-args": [
-                    "-DBUILD_DEPTHAI=ON"
-                ]
-              }
-            }
+          required-ros-distributions: ${{ matrix.ros-distro }}
+#      - if: ${{ matrix.ros-distro  == 'foxy' }}
+#        run:
+#          echo "ROS_PATH=c:/dev/${{ matrix.ros-distro }}/ros2-windows" >> $env:GITHUB_ENV
+      - name: Install noetic
+        if: ${{ matrix.ros-distro  == 'noetic' }}
+        run: |
+          mkdir c:\opt\chocolatey
+          set ChocolateyInstall=c:\opt\chocolatey
+          choco source add -n=ros-win -s="https://aka.ms/ros/public" --priority=1
+          choco upgrade ros-noetic-desktop_full -y --execution-timeout=0
+          echo "ROS_PATH=c:\opt\ros\noetic\x64" >> $env:GITHUB_ENV
+      - name: Install noetic
+        if: ${{ matrix.ros-distro  != 'noetic' }}
+        run: |
+          mkdir c:\opt\chocolatey
+          set ChocolateyInstall=c:\opt\chocolatey
+          choco source add -n=ros-win -s="https://aka.ms/ros/public" --priority=1
+          choco upgrade ros-foxy-desktop -y --execution-timeout=0
+          echo "ROS_PATH=c:\opt\ros\foxy\x64" >> $env:GITHUB_ENV
+
+      - name: Run cmake
+        run: |
+          ${{ env.ROS_PATH }}/setup.bat
+          md c:\build
+          cd c:\build
+          cmake -DBUILD_DEPTHAI=ON -B c:\build -S ${{ github.workspace }} 
+          cmake --build c:\build -t install
 
   build-and-push-image:
     runs-on: ubuntu-latest

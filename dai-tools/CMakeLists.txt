@@ -7,7 +7,20 @@ if(NOT TARGET depthai::core)
   find_package(depthai REQUIRED)
 endif()
 
-find_package(yaml-cpp REQUIRED)
+find_package(yaml-cpp QUIET)
+
+if(NOT yaml_cpp_FOUND)
+  FetchContent_Declare(
+          yaml-cpp
+          GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+          GIT_TAG yaml-cpp-0.7.0
+  )
+
+  #FetchContent_MakeAvailable(opencv)
+  FetchContent_MakeAvailable(yaml-cpp)
+  set(YAML_CPP_LIBRARIES yaml-cpp)
+endif()
+
 include_directories(${YAML_CPP_INCLUDE_DIR})
 
 add_library(cr-dai-tools STATIC src/cr-dai-tools.cc src/generate_pipeline.cc)
