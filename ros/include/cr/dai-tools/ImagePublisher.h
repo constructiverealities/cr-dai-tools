@@ -14,11 +14,12 @@
 
 namespace cr {
     namespace dai_rosnode {
-    class ImagePublisher : public Publisher_<dai::ImgFrame, ros_impl::sensor_msgs::Image, std::shared_ptr<image_transport::CameraPublisher>> {
+    class ImagePublisher : public Publisher_<dai::ImgFrame, ros_impl::sensor_msgs::Image> {
         protected:
 #ifdef HAS_IDL_SUPPORT
             ros_impl::Publisher<cr_dai_ros::CameraMetadata> _cameraMetaPublisher;
 #endif
+            ros_impl::Publisher<ros_impl::sensor_msgs::CameraInfo> _cameraInfoPub;
             ros_impl::sensor_msgs::CameraInfo _cameraInfoData;
 
             void operator()(std::shared_ptr<dai::ImgFrame> msg) override;

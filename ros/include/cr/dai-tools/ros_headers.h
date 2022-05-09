@@ -65,8 +65,6 @@ namespace ros_impl {
         return p->getNumSubscribers();
     }
 
-    int get_subscription_count(const Node& n, const std::shared_ptr<image_transport::CameraPublisher>& p);
-
     namespace std_msgs {
         typedef ::std_msgs::Header Header;
         typedef ::std_msgs::UInt8MultiArray UInt8MultiArray;
@@ -103,7 +101,7 @@ namespace ros_impl {
     template<typename MessageT, typename PublisherT = ros::Publisher, typename... Args>
     static inline std::shared_ptr<PublisherT> create_publisher(
             const Node& node, Args&&... args) {
-        return std::make_shared<PublisherT>(node->template advertise<MessageT>(args...));
+        return std::make_shared<PublisherT>(node->advertise<MessageT>(args...));
     }
 }
 #endif
@@ -161,8 +159,6 @@ namespace ros_impl {
     static inline int get_subscription_count(const Node& n, const Publisher<T>& p) {
         return p->get_subscription_count();
     }
-
-    int get_subscription_count(const Node& n, const std::shared_ptr<image_transport::CameraPublisher>& p);
 
     namespace std_msgs {
         typedef ::std_msgs::msg::Header Header;

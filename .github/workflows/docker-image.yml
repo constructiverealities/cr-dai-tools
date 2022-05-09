@@ -60,10 +60,10 @@ jobs:
 
       - name: Run cmake
         run: |
-          dir env:
           md c:\build-${{matrix.ros-distro}}
           cd c:\build-${{matrix.ros-distro}}
           ${{ env.ROS_PATH }}/setup.ps1
+          dir env:          
           cmake -DBUILD_DEPTHAI=ON -B c:\build-${{matrix.ros-distro}} -S ${{ github.workspace }}
           
           cmake --build c:\build-${{matrix.ros-distro}} -t autonode

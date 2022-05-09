@@ -14,8 +14,11 @@ if(NOT TARGET depthai::core)
     find_package(depthai REQUIRED)
 endif()
 
-find_package(catkin COMPONENTS roscpp sensor_msgs  tf camera_info_manager image_transport tf2 catkin
-        dynamic_reconfigure geometry_msgs std_msgs message_generation tf2_ros)
+SET(ROS_DEPENDENCIES sensor_msgs tf2 geometry_msgs std_msgs tf2_ros camera_info_manager)
+SET(ROS1_DEPENDENCIES ${ROS_DEPENDENCIES} catkin roscpp dynamic_reconfigure)
+SET(ROS2_DEPENDENCIES ${ROS_DEPENDENCIES})
+
+find_package(catkin COMPONENTS ${ROS1_DEPENDENCIES})
 
 find_package(ament_cmake)
 
@@ -23,27 +26,12 @@ SET(BUILD_ROS OFF)
 if(ament_cmake_FOUND)
     SET(BUILD_ROS ON)
 
-    #find_package(rmw_cyclonedds_cpp REQUIRED)
-    #set(RMW_IMPLEMENTATION rmw_cyclonedds_cpp)
-    #find_package(rmw_fastrtps_cpp REQUIRED)
-    find_package(rclcpp REQUIRED)
     find_package(rosidl_default_generators REQUIRED)
-
-    find_package(tf2 REQUIRED)
-    find_package(tf2_ros REQUIRED)
-
-    find_package(image_transport REQUIRED)
-    find_package(sensor_msgs REQUIRED)
-    find_package(stereo_msgs REQUIRED)
-    find_package(std_msgs REQUIRED)
-
-    find_package(camera_info_manager REQUIRED)
+    foreach(d ${ROS2_DEPENDENCIES})
+        find_package(${d} REQUIRED)
+    endforeach()
 
     include_directories(${ament_INCLUDE_DIRS}})
-
-    #    find_package(rmw_connext_cpp REQUIRED)
-    find_package(std_msgs REQUIRED)
-    #find_package(std_interfaces REQUIRED)
 #
 #    rosidl_generate_interfaces(${PROJECT_NAME}
 #            ./msg/CameraMetadata.msg
@@ -51,14 +39,7 @@ if(ament_cmake_FOUND)
 #            LIBRARY_NAME ${PROJECT_NAME}
 #    )
 
-    ament_export_dependencies(rosidl_default_runtime 
-            image_transport
-            rclcpp
-            sensor_msgs
-            stereo_msgs
-            std_msgs
-            tf2 tf2_ros
-            camera_info_manager)
+    ament_export_dependencies(rosidl_default_runtime ${ROS2_DEPENDENCIES})
 
     add_compile_options(-DHAS_ROS2=1)
 elseif(catkin_FOUND)
@@ -83,7 +64,7 @@ elseif(catkin_FOUND)
     catkin_package(
             INCLUDE_DIRS include
             LIBRARIES ${PROJECT_NAME}
-            CATKIN_DEPENDS geometry_msgs message_runtime sensor_msgs std_msgs dynamic_reconfigure tf2_ros
+            CATKIN_DEPENDS ${ROS1_DEPENDENCIES}
     )
 
     include_directories(include)
@@ -123,13 +104,7 @@ if(ament_cmake_FOUND)
     ament_export_libraries(depthai_bridge)
     ament_export_dependencies(${dependencies})
 
-    ament_target_dependencies(cr-dai-rosnode-lib 
-            image_transport
-            rclcpp
-            sensor_msgs tf2 tf2_ros
-            stereo_msgs
-            std_msgs
-            camera_info_manager)
+    ament_target_dependencies(cr-dai-rosnode-lib ${ROS2_DEPENDENCIES} rclcpp)
 
     #rosidl_target_interfaces(DepthaiCameraInfoManager cr_dai_ros "rosidl_typesupport_cpp")
     #rosidl_target_interfaces(autonode ${PROJECT_NAME} rosidl_typesupport_cpp)

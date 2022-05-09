@@ -95,7 +95,7 @@ cr::dai_rosnode::ImagePublisher::ImagePublisher(std::shared_ptr<dai::DataOutputQ
                                                 const ros_impl::sensor_msgs::CameraInfo& cameraInfoData,
                                                 std::shared_ptr<dai::node::XLinkOut> xlinkOut) :
         _cameraInfoData(cameraInfoData),
-        Publisher_<dai::ImgFrame, ros_impl::sensor_msgs::Image, std::shared_ptr<image_transport::CameraPublisher>>(daiMessageQueue, nh, queueSize, xlinkOut) {
+        Publisher_<dai::ImgFrame, ros_impl::sensor_msgs::Image>(daiMessageQueue, nh, queueSize, xlinkOut) {
     ROS_IMPL_INFO(nh, "Creating image publisher for ns %s/%s", ros_impl::Namespace(nh), xLinkOut->getStreamName().c_str());
 }
 
@@ -126,7 +126,11 @@ void cr::dai_rosnode::ImagePublisher::operator()(std::shared_ptr<dai::ImgFrame> 
             ros_impl::sensor_msgs::Image imageBuffer;
             dai_to_rosimg(_nh, inFrame, imageBuffer);
             imageBuffer.header = header;
-            publisher->publish(imageBuffer, _cameraInfoData);
+            publisher->publish(imageBuffer);
+
+            auto cameraInfo = _cameraInfoData;
+            cameraInfo.header = header;
+            _cameraInfoPub->publish(cameraInfo);
         }
 
 #ifdef HAS_IDL_SUPPORT
@@ -154,14 +158,10 @@ void cr::dai_rosnode::ImagePublisher::Setup() {
 #ifdef HAS_IDL_SUPPORT
     _cameraMetaPublisher = ros_impl::create_publisher<cr_dai_ros::CameraMetadata>(_nh, Name() + "/camera_metadata", queueSize);
 #endif
-    //_cameraMetaPublisher = _nh.advertise<cr_dai_ros::CameraMetadata>(Name() + "/camera_metadata", queueSize);
 
-#if HAS_ROS2
-    image_transport::ImageTransport it(_nh);
-#else
-    image_transport::ImageTransport it(*_nh);
-#endif
-    publisher = std::make_shared<image_transport::CameraPublisher>(std::move(it.advertiseCamera(std::string(ros_impl::Namespace(_nh)) + "/" + Name() + "/image", queueSize)));
+    publisher = ros_impl::create_publisher<ros_impl::sensor_msgs::Image>(_nh, Name() + "/image", queueSize);
+    _cameraInfoPub = ros_impl::create_publisher<ros_impl::sensor_msgs::CameraInfo>(_nh, Name() + "/camera_info", queueSize);
+
     Publisher_::Setup();
 }
 

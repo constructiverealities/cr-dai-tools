@@ -23,10 +23,6 @@ namespace ros_impl {
         return node->get_clock()->now();
     }
 
-    int get_subscription_count(const Node &n, const std::shared_ptr<image_transport::CameraPublisher> &p) {
-        return n->count_subscribers(p->getTopic());
-    }
-
     const char *Namespace(const Node &n) { return n->get_effective_namespace().c_str(); }
 #else
     void spin(const Node &n) {
@@ -50,10 +46,15 @@ namespace ros_impl {
         return Time::now();
     }
 
-    int get_subscription_count(const Node &n, const std::shared_ptr<image_transport::CameraPublisher> &p) {
-        return p->getNumSubscribers();
-    }
 
     const char *Namespace(const Node &n) { return n->getNamespace().c_str(); }
 #endif
 }
+
+#ifdef HAS_ROS2
+namespace rosidl_typesupport_cpp {
+    template<> rosidl_message_type_support_t const * get_message_type_support_handle<ros_impl::sensor_msgs::CameraInfo>() {
+        return rosidl_typesupport_cpp::get_message_type_support_handle<sensor_msgs::msg::CameraInfo>();
+    }
+}
+#endif
