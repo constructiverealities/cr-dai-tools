@@ -49,7 +49,7 @@ jobs:
           choco source add -n=ros-win -s="https://aka.ms/ros/public" --priority=1
           choco upgrade ros-noetic-desktop_full -y --execution-timeout=0      --no-progress
           echo "ROS_PATH=c:\opt\ros\noetic\x64" >> $env:GITHUB_ENV
-      - name: Install noetic
+      - name: Install foxy
         if: ${{ matrix.ros-distro  != 'noetic' }}
         run: |
           mkdir c:\opt\chocolatey
@@ -64,6 +64,7 @@ jobs:
           cd c:\build-${{matrix.ros-distro}}
           ${{ env.ROS_PATH }}/setup.ps1
           dir env:          
+          dir -s ${{ env.ROS_PATH }}/share
           cmake -DBUILD_DEPTHAI=ON -B c:\build-${{matrix.ros-distro}} -S ${{ github.workspace }}
           
           cmake --build c:\build-${{matrix.ros-distro}} -t autonode

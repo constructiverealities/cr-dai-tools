@@ -18,8 +18,8 @@ SET(ROS_DEPENDENCIES sensor_msgs tf2 geometry_msgs std_msgs tf2_ros camera_info_
 SET(ROS1_DEPENDENCIES ${ROS_DEPENDENCIES} catkin roscpp dynamic_reconfigure)
 SET(ROS2_DEPENDENCIES ${ROS_DEPENDENCIES})
 
+set(CMAKE_FIND_DEBUG_MODE TRUE)
 find_package(catkin COMPONENTS ${ROS1_DEPENDENCIES})
-
 find_package(ament_cmake)
 
 SET(BUILD_ROS OFF)
