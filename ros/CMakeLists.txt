@@ -14,12 +14,11 @@ if(NOT TARGET depthai::core)
     find_package(depthai REQUIRED)
 endif()
 
-SET(ROS_DEPENDENCIES sensor_msgs tf2 geometry_msgs std_msgs tf2_ros camera_info_manager)
+SET(ROS_DEPENDENCIES sensor_msgs tf2 geometry_msgs std_msgs tf2_ros camera_info_manager )
 SET(ROS1_DEPENDENCIES ${ROS_DEPENDENCIES} catkin roscpp dynamic_reconfigure)
 SET(ROS2_DEPENDENCIES ${ROS_DEPENDENCIES})
 
-set(CMAKE_FIND_DEBUG_MODE TRUE)
-find_package(catkin COMPONENTS ${ROS1_DEPENDENCIES})
+find_package(catkin)
 find_package(ament_cmake)
 
 SET(BUILD_ROS OFF)
@@ -44,16 +43,28 @@ if(ament_cmake_FOUND)
     add_compile_options(-DHAS_ROS2=1)
 elseif(catkin_FOUND)
     SET(BUILD_ROS ON)
-    message("Building ROS tools... ${catkin_INCLUDE_DIRS}")
+    message("Building ROS tools... ${CATKIN_WORKSPACES}")
+
+    SET(ROS_LIBRARIES)
+    set(CMAKE_FIND_DEBUG_MODE TRUE)
+    foreach(d ${ROS1_DEPENDENCIES})
+        message("Looking for '${d}' ${${d}_FOUND}")
+        find_package(${d} REQUIRED)
+        message("Found ${${d}_FOUND} ${${d}_LIBRARIES}")
+        LIST(APPEND ROS_LIBRARIES ${${d}_LIBRARIES})
+    endforeach()
 
     add_message_files (
             FILES
             CameraMetadata.msg
     )
 
+    set(CATKIN_WORKSPACES "$ENV{ROS_PATH}")
+    string(REPLACE "\\" "/" CATKIN_WORKSPACES "${CATKIN_WORKSPACES}")
+
     generate_messages (
             DEPENDENCIES
-            geometry_msgs sensor_msgs std_msgs dynamic_reconfigure
+           std_msgs dynamic_reconfigure
     )
     generate_dynamic_reconfigure_options(
             cfg/StereoDepth.cfg
@@ -72,6 +83,7 @@ elseif(catkin_FOUND)
     include_directories(${cr_dai_ros_INCLUDE_DIRS})
 
     add_compile_options(-DHAS_ROS1=1)
+    set(CMAKE_FIND_DEBUG_MODE FALSE)
 else()
     message("Not building ROS tools...")
 endif()
@@ -82,11 +94,11 @@ if(BUILD_ROS)
     include_directories(${cr_dai_ros_INCLUDE_DIRS})
     add_compile_options(-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)
     add_library(cr-dai-rosnode-lib STATIC src/PipelinePublisher.cc src/ImagePublisher.cc src/ToFDepthPublisher.cc src/IMUPublisher.cc src/NNPublisher.cc ./src/DepthAICameraInfoManager.cpp ./src/virtual_camera_info_manager.cc ./src/ros_impl.cc)
-    target_link_libraries(cr-dai-rosnode-lib cr-dai-tools ${catkin_LIBRARIES} depthai::core)
+    target_link_libraries(cr-dai-rosnode-lib cr-dai-tools ${ROS_LIBRARIES} depthai::core)
     target_include_directories(cr-dai-rosnode-lib PUBLIC include ${depthai_INCLUDE_DIRS} ${cr_dai_ros_INCLUDE_DIRS})
 
     if(NOT "${cr_dai_ros_EXPORTED_TARGETS}" STREQUAL "")
-        add_dependencies(cr-dai-rosnode-lib ${cr_dai_ros_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+        add_dependencies(cr-dai-rosnode-lib ${cr_dai_ros_EXPORTED_TARGETS} )
     endif()
 
     add_executable(autonode apps/autonode.cc)
@@ -105,10 +117,6 @@ if(ament_cmake_FOUND)
     ament_export_dependencies(${dependencies})
 
     ament_target_dependencies(cr-dai-rosnode-lib ${ROS2_DEPENDENCIES} rclcpp)
-
-    #rosidl_target_interfaces(DepthaiCameraInfoManager cr_dai_ros "rosidl_typesupport_cpp")
-    #rosidl_target_interfaces(autonode ${PROJECT_NAME} rosidl_typesupport_cpp)
-    #rosidl_target_interfaces(autonode ${PROJECT_NAME} rosidl_typesupport_fastrtps_cpp)
 
     ament_package()
 elseif(catkin_FOUND)
