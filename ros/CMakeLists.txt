@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
 
-
 cmake_policy(SET CMP0057 NEW)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -54,18 +53,19 @@ elseif(catkin_FOUND)
         LIST(APPEND ROS_LIBRARIES ${${d}_LIBRARIES})
     endforeach()
 
+    set(CATKIN_WORKSPACES "$ENV{ROS_PATH}")
+    string(REPLACE "\\" "/" CATKIN_WORKSPACES "${CATKIN_WORKSPACES}")
+
     add_message_files (
             FILES
             CameraMetadata.msg
     )
 
-    set(CATKIN_WORKSPACES "$ENV{ROS_PATH}")
-    string(REPLACE "\\" "/" CATKIN_WORKSPACES "${CATKIN_WORKSPACES}")
-
     generate_messages (
             DEPENDENCIES
            std_msgs dynamic_reconfigure
     )
+    message(" ${cr_dai_ros_EXPORTED_TARGETS}")
     generate_dynamic_reconfigure_options(
             cfg/StereoDepth.cfg
             cfg/CameraControl.cfg
@@ -83,6 +83,9 @@ elseif(catkin_FOUND)
     include_directories(${cr_dai_ros_INCLUDE_DIRS})
 
     add_compile_options(-DHAS_ROS1=1)
+
+    set(ROS_EXPORT_TARGETS ${cr_dai_ros_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+    message("ROS libraries: ${ROS_LIBRARIES} ${ROS_EXPORT_TARGETS}")
     set(CMAKE_FIND_DEBUG_MODE FALSE)
 else()
     message("Not building ROS tools...")
@@ -90,15 +93,13 @@ endif()
 
 if(BUILD_ROS)
     include_directories(include)
-    include_directories(${catkin_INCLUDE_DIRS})
-    include_directories(${cr_dai_ros_INCLUDE_DIRS})
+
     add_compile_options(-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)
     add_library(cr-dai-rosnode-lib STATIC src/PipelinePublisher.cc src/ImagePublisher.cc src/ToFDepthPublisher.cc src/IMUPublisher.cc src/NNPublisher.cc ./src/DepthAICameraInfoManager.cpp ./src/virtual_camera_info_manager.cc ./src/ros_impl.cc)
     target_link_libraries(cr-dai-rosnode-lib cr-dai-tools ${ROS_LIBRARIES} depthai::core)
-    target_include_directories(cr-dai-rosnode-lib PUBLIC include ${depthai_INCLUDE_DIRS} ${cr_dai_ros_INCLUDE_DIRS})
-
-    if(NOT "${cr_dai_ros_EXPORTED_TARGETS}" STREQUAL "")
-        add_dependencies(cr-dai-rosnode-lib ${cr_dai_ros_EXPORTED_TARGETS} )
+    target_include_directories(cr-dai-rosnode-lib PUBLIC include ${depthai_INCLUDE_DIRS})
+    if(NOT "${ROS_EXPORT_TARGETS}" STREQUAL "")
+        add_dependencies(cr-dai-rosnode-lib ${ROS_EXPORT_TARGETS})
     endif()
 
     add_executable(autonode apps/autonode.cc)

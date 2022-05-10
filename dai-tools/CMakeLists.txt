@@ -8,20 +8,18 @@ if(NOT TARGET depthai::core)
 endif()
 
 if(NOT TARGET yaml-cpp)
-  MESSAGE("Searching for yaml")
-  find_package(yaml-cpp QUIET)
-  if(NOT TARGET yaml-cpp)
-    include(FetchContent)
-    MESSAGE("Getting yaml")
-    FetchContent_Declare(
-            yaml-cpp
-            GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
-            GIT_TAG yaml-cpp-0.7.0
-    )
+  include(FetchContent)
+  MESSAGE("Getting yaml")
+  FetchContent_Declare(
+          yaml-cpp
+          GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+          GIT_TAG yaml-cpp-0.7.0
+  )
 
-    FetchContent_MakeAvailable(yaml-cpp)
-    set(YAML_CPP_LIBRARIES yaml-cpp)
-  endif()
+  option(YAML_BUILD_SHARED_LIBS "Build yaml-cpp shared library" OFF)
+  FetchContent_MakeAvailable(yaml-cpp)
+
+  set(YAML_CPP_LIBRARIES yaml-cpp)
 endif()
 
 include_directories(${YAML_CPP_INCLUDE_DIR})
