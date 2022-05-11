@@ -78,6 +78,7 @@ elseif(catkin_FOUND)
             CATKIN_DEPENDS ${ROS1_DEPENDENCIES}
     )
 
+    include_directories(${CATKIN_WORKSPACES}/include)
     include_directories(include)
     include_directories(${catkin_INCLUDE_DIRS})
     include_directories(${cr_dai_ros_INCLUDE_DIRS})
@@ -86,6 +87,7 @@ elseif(catkin_FOUND)
 
     set(ROS_EXPORT_TARGETS ${cr_dai_ros_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
     message("ROS libraries: ${ROS_LIBRARIES} ${ROS_EXPORT_TARGETS}")
+    message("ROS includes: ${catkin_INCLUDE_DIRS} cr_dai_ros: ${cr_dai_ros_INCLUDE_DIRS} ros: ${CATKIN_WORKSPACES}/include")
     set(CMAKE_FIND_DEBUG_MODE FALSE)
 else()
     message("Not building ROS tools...")
