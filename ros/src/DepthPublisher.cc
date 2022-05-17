@@ -13,7 +13,7 @@ void cr::dai_rosnode::DepthPublisher::Setup() {
     pc_template.point_step = sizeof (float ) * 3;
     pc_template.row_step = pc_template.point_step * pc_template.width;
 
-    sensor_msgs::PointField field;
+    ros_impl::sensor_msgs::PointField field;
     field.count = 1;
     field.datatype = 7;
     field.offset = 0;
@@ -51,7 +51,7 @@ void cr::dai_rosnode::DepthPublisher::operator()(std::shared_ptr<dai::ImgFrame> 
     ImagePublisher::operator()(msg);
 
     if(ros_impl::get_subscription_count(_nh, pointcloudPublisher) > 0){
-        sensor_msgs::PointCloud2 pc = pc_template;
+        auto pc = pc_template;
         pc.header = _cameraInfoData.header;
         pc.data.resize(pc.point_step * pc.height * pc.width);
         auto& d = msg->getData();
@@ -65,7 +65,7 @@ bool cr::dai_rosnode::DepthPublisher::hasDataListeners() const {
     return ImagePublisher::hasDataListeners() || ros_impl::get_subscription_count(_nh, pointcloudPublisher) > 0;
 }
 
-cr::dai_tools::DepthToXYZ cr::dai_rosnode::DepthPublisher::createDepthMapper(const sensor_msgs::CameraInfo &info) {
+cr::dai_tools::DepthToXYZ cr::dai_rosnode::DepthPublisher::createDepthMapper(const ros_impl::sensor_msgs::CameraInfo &info) {
     std::vector<double> lp = {info.K[0], info.K[4], info.K[2], info.K[5]};
     return cr::dai_tools::DepthToXYZ(info.width, info.height, lp, info.D);
 }

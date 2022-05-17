@@ -19,7 +19,7 @@ namespace cr {
         protected:
             ros_impl::Publisher<ros_impl::sensor_msgs::Image> pointcloudMapPublisher;
             ros_impl::Publisher<ros_impl::sensor_msgs::PointCloud2> pointcloudPublisher;
-            sensor_msgs::PointCloud2 pc_template;
+            ros_impl::sensor_msgs::PointCloud2 pc_template;
             cr::dai_tools::DepthToXYZ depthMapper;
             void operator()(std::shared_ptr<dai::ImgFrame> msg) override;
             bool hasDataListeners() const override;
@@ -32,7 +32,7 @@ namespace cr {
 
             void Setup() override;
 
-            static cr::dai_tools::DepthToXYZ createDepthMapper(const sensor_msgs::CameraInfo &info);
+            static cr::dai_tools::DepthToXYZ createDepthMapper(const ros_impl::sensor_msgs::CameraInfo &info);
         };
 
     }

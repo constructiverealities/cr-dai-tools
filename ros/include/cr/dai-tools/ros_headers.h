@@ -75,6 +75,7 @@ namespace ros_impl {
         typedef ::sensor_msgs::Image Image;
         typedef ::sensor_msgs::Imu Imu;
         typedef ::sensor_msgs::CameraInfo CameraInfo;
+        typedef ::sensor_msgs::PointField PointField;
 
         typedef ::sensor_msgs::SetCameraInfo SetCameraInfo;
     }
@@ -172,6 +173,8 @@ namespace ros_impl {
         typedef ::sensor_msgs::msg::Image Image;
         typedef ::sensor_msgs::msg::Imu Imu;
         typedef ::sensor_msgs::msg::PointCloud2 PointCloud2;
+        typedef ::sensor_msgs::msg::PointField PointField;
+
         struct CameraInfo : public ::sensor_msgs::msg::CameraInfo {
             std::array<double, 9>& K;
             decltype(d)& D;
