@@ -14,6 +14,7 @@
 #include <boost/thread/mutex.hpp>
 #include <sensor_msgs/CameraInfo.h>
 #include <sensor_msgs/SetCameraInfo.h>
+#include <sensor_msgs/PointCloud2.h>
 #include <ros/macros.h>
 
 #include <ros/ros.h>
@@ -70,6 +71,7 @@ namespace ros_impl {
         typedef ::std_msgs::UInt8MultiArray UInt8MultiArray;
     }
     namespace sensor_msgs {
+        typedef ::sensor_msgs::PointCloud2 PointCloud2;
         typedef ::sensor_msgs::Image Image;
         typedef ::sensor_msgs::Imu Imu;
         typedef ::sensor_msgs::CameraInfo CameraInfo;
@@ -98,11 +100,12 @@ namespace ros_impl {
         }));
     }
 
-    template<typename MessageT, typename PublisherT = ros::Publisher, typename... Args>
+    template<typename MessageT, typename PublisherT = ros::Publisher>
     static inline std::shared_ptr<PublisherT> create_publisher(
-            const Node& node, Args&&... args) {
-        return std::make_shared<PublisherT>(node->advertise<MessageT>(args...));
+            const Node& node, const std::string& t, int qsize) {
+        return std::make_shared<PublisherT>(node->advertise<MessageT>(t, qsize, true));
     }
+
 }
 #endif
 
@@ -118,6 +121,7 @@ namespace ros_impl {
 #include "sensor_msgs/msg/camera_info.hpp"
 #include "sensor_msgs/msg/image.hpp"
 #include "sensor_msgs/msg/imu.hpp"
+#include "sensor_msgs/msg/point_cloud2.hpp"
 #include "sensor_msgs/srv/set_camera_info.hpp"
 #include "std_msgs/msg/header.hpp"
 #include "std_msgs/msg/u_int8_multi_array.hpp"
@@ -167,6 +171,7 @@ namespace ros_impl {
     namespace sensor_msgs {
         typedef ::sensor_msgs::msg::Image Image;
         typedef ::sensor_msgs::msg::Imu Imu;
+        typedef ::sensor_msgs::msg::PointCloud2 PointCloud2;
         struct CameraInfo : public ::sensor_msgs::msg::CameraInfo {
             std::array<double, 9>& K;
             decltype(d)& D;

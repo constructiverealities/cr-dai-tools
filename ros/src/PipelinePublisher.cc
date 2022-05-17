@@ -3,6 +3,7 @@
 #include "depthai/pipeline/Pipeline.hpp"
 
 #include "cr/dai-tools/ImagePublisher.h"
+#include "cr/dai-tools/DepthPublisher.h"
 #include "cr/dai-tools/ToFDepthPublisher.h"
 #include "cr/dai-tools/IMUPublisher.h"
 #include "cr/dai-tools/NNPublisher.h"
@@ -40,7 +41,7 @@ namespace cr {
         PipelinePublisher::PipelinePublisher(::ros_impl::Node& pnh,
                                              std::shared_ptr<dai::Device> device,
                                              dai::Pipeline& pipeline)
-                : _device_node(pnh), _device(*device), metaInfo(device) {
+                : _device_node(pnh), _device(*device), metaInfo(device), mxId(device->getMxId()) {
             _calibrationHandler = device->readCalibration();
             BuildPublisherFromPipeline(pipeline);
         }
@@ -52,6 +53,8 @@ namespace cr {
             auto configQueue = _device.getInputQueue(prefix + "Config");
             auto server = std::make_shared<dynamic_reconfigure::Server<cr_dai_ros::StereoDepthConfig>>(*n);
             cr_dai_ros::StereoDepthConfig def_config = { };
+            def_config.threshold_min = stereo->initialConfig.get().postProcessing.thresholdFilter.minRange;
+            def_config.threshold_max = stereo->initialConfig.get().postProcessing.thresholdFilter.maxRange;
             def_config.left_right_check = stereo->initialConfig.getLeftRightCheckThreshold() > 0; // No getter for this; just check threshold??
             def_config.confidence = stereo->initialConfig.getConfidenceThreshold();
             def_config.bilateral_sigma = stereo->initialConfig.getBilateralFilterSigma();
@@ -110,6 +113,14 @@ namespace cr {
                         }
                     }
                 }
+            }
+
+            auto qs = _device.getOutputQueueNames();
+            for(auto q : qs) {
+                mappedQueues.erase(q);
+            }
+            for(auto& q : mappedQueues) {
+                ROS_IMPL_WARN(_device_node, "Unmapped queue %s", q.c_str());
             }
         }
 
@@ -195,7 +206,7 @@ namespace cr {
         }
         bool PipelinePublisher::Visit(SetupPublishers, std::shared_ptr<dai::node::XLinkOut> xLinkOut,
                    const std::string& inputName, std::shared_ptr<dai::node::NeuralNetwork> ptr) {
-            auto queue = _device.getOutputQueue(xLinkOut->getStreamName(), 4, false);
+            auto queue = getOutputQueue(xLinkOut, 4, false);
             make_publisher<NNPublisher>(
                     queue,
                     _device_node,
@@ -206,7 +217,7 @@ namespace cr {
         }
         bool PipelinePublisher::Visit(SetupPublishers, std::shared_ptr<dai::node::XLinkOut> xLinkOut,
                    const std::string& inputName, std::shared_ptr<dai::node::IMU> inputNode) {
-            auto queue = _device.getOutputQueue(xLinkOut->getStreamName(), 4, false);
+            auto queue = getOutputQueue(xLinkOut, 4, false);
             make_publisher<IMUPublisher>(
                     queue,
                     _device_node,
@@ -217,7 +228,7 @@ namespace cr {
 
         bool PipelinePublisher::Visit(SetupPublishers, std::shared_ptr<dai::node::XLinkOut> xLinkOut,
                    const std::string& inputName, std::shared_ptr<dai::node::Camera> inputNode) {
-            auto queue = _device.getOutputQueue(xLinkOut->getStreamName(), 4, false);
+            auto queue = getOutputQueue(xLinkOut, 4, false);
 
             ros_impl::sensor_msgs::CameraInfo rawCameraInfo;
             make_publisher<ImagePublisher>(
@@ -232,7 +243,7 @@ namespace cr {
 
         bool PipelinePublisher::Visit(SetupPublishers, std::shared_ptr<dai::node::XLinkOut> xLinkOut,
                    const std::string& inputName, std::shared_ptr<dai::node::ToF> inputNode) {
-            auto queue = _device.getOutputQueue(xLinkOut->getStreamName(), 4, false);
+            auto queue = getOutputQueue(xLinkOut, 4, false);
 
             int width = 224, height = 172;
             auto socket = dai::CameraBoardSocket::RGB;
@@ -255,9 +266,9 @@ namespace cr {
 
         bool PipelinePublisher::Visit(SetupPublishers, std::shared_ptr<dai::node::XLinkOut> xLinkOut,
                                       const std::string &inputName, std::shared_ptr<dai::node::MonoCamera> inputNode) {
-            auto queue = _device.getOutputQueue(xLinkOut->getStreamName(), 4, false);
+            auto queue = getOutputQueue(xLinkOut, 4, false);
 
-            int width = 1280, height = 720;
+            int width = 1280, height = 800;
             width = inputNode->getResolutionWidth();
             height = inputNode->getResolutionHeight();
 
@@ -271,7 +282,7 @@ namespace cr {
         }
         bool PipelinePublisher::Visit(SetupPublishers, std::shared_ptr<dai::node::XLinkOut> xLinkOut,
                                       const std::string &inputName, std::shared_ptr<dai::node::ColorCamera> inputNode) {
-            auto queue = _device.getOutputQueue(xLinkOut->getStreamName(), 4, false);
+            auto queue = getOutputQueue(xLinkOut, 4, false);
 
             int width = 1280, height = 720;
             if(inputName == "video") {
@@ -305,16 +316,16 @@ namespace cr {
                                       const std::string &inputName,
                                       std::shared_ptr<dai::node::StereoDepth> stereo) {
 
-            auto queue = _device.getOutputQueue(xLinkOut->getStreamName(), 4, false);
+            auto queue = getOutputQueue(xLinkOut, 4, false);
             auto alignSocket = stereo->properties.depthAlignCamera;
             if(alignSocket == dai::CameraBoardSocket::AUTO) {
-                alignSocket = dai::CameraBoardSocket::RIGHT;
+                alignSocket = dai::CameraBoardSocket::LEFT;
             }
 
-            auto depthCameraInfo = CameraInfo(alignSocket, 1280, 720);
+            auto depthCameraInfo = CameraInfo(alignSocket, 1280, 800);
             if(inputName == "depth") {
                 //converter = std::make_shared<ImageConverter>(_frame_prefix + frame, true);
-                make_publisher<ImagePublisher>(
+                make_publisher<DepthPublisher>(
                         queue,
                         _device_node,
                         30,
@@ -343,9 +354,12 @@ namespace cr {
                         depthCameraInfo,
                         xLinkOut);
             } else if(inputName == "rectifiedLeft" || inputName == "rectifiedRight" || inputName == "syncedRight" || inputName == "syncedLeft") {
-                std::string side_name = (inputName == "rectifiedLeft" || inputName == "syncedLeft") ? "left" : "right";
+                bool isLeft = (inputName == "rectifiedLeft" || inputName == "syncedLeft");
+
+                std::string side_name = isLeft ? "left" : "right";
                 auto socket = side_name == "left" ? dai::CameraBoardSocket::LEFT : dai::CameraBoardSocket::RIGHT;
-                std::string pub_name = side_name + ((inputName == "rectifiedLeft" || inputName == "rectifiedRight") ? "/image_rect" : "/image_raw");
+                bool isRect = (inputName == "rectifiedLeft" || inputName == "rectifiedRight");
+                std::string pub_name = side_name + (isRect ? "/image_rect" : "/image_raw");
 
                 int monoWidth = 0, monoHeight = 0;
                 auto pipeline = stereo->getParentPipeline();
@@ -366,6 +380,10 @@ namespace cr {
                 auto cameraInfo = CameraInfo(monoNode->getBoardSocket(),
                                                           monoNode->getResolutionWidth(),
                                                           monoNode->getResolutionHeight());
+                if(isRect) {
+                    for(auto& d : cameraInfo.D)
+                        d = 0;
+                }
                 make_publisher<ImagePublisher>(
                         queue,
                         _device_node,
@@ -421,11 +439,21 @@ namespace cr {
             auto manager = _cameraManagers[socket];
             if(!manager) {
                 auto ns = default_frame_mapping()[socket];
-                auto cname = "dai_" + _device.getMxId() + "_" + ns;
-                _cameraManagers[socket] = manager = DepthaiCameraInfoManager::get(_device, _calibrationHandler, socket, getNodeHandle(socket), cname);
+                auto cname = "dai_" + mxId + "_" + ns;
+                _cameraManagers[socket] = manager = DepthaiCameraInfoManager::get(_device, _calibrationHandler, socket, getNodeHandle(socket), cname,
+                                                                                  "flash:///", width, height, topLeftPixelId, bottomRightPixelId);
             }
             //return ros_impl::sensor_msgs::CameraInfo();
             return manager->getCameraInfo();
+        }
+
+        std::shared_ptr<dai::DataOutputQueue>
+        PipelinePublisher::getOutputQueue(std::shared_ptr<dai::node::XLinkOut> xlinkOut, int qsize, bool blocking) {
+            if(mappedQueues.find(xlinkOut->getStreamName()) != mappedQueues.end()) {
+                ROS_IMPL_WARN(this->_device_node, "Output queue %s mapped twice", xlinkOut->getStreamName().c_str());
+            }
+            mappedQueues.insert(xlinkOut->getStreamName());
+            return _device.getOutputQueue(xlinkOut->getStreamName(), qsize, blocking);
         }
 
     }

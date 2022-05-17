@@ -24,7 +24,7 @@ endif()
 
 include_directories(${YAML_CPP_INCLUDE_DIR})
 
-add_library(cr-dai-tools STATIC src/cr-dai-tools.cc src/generate_pipeline.cc)
+add_library(cr-dai-tools STATIC src/cr-dai-tools.cc src/generate_pipeline.cc src/DepthToXYZ.cc)
 target_link_libraries(cr-dai-tools depthai::core ${YAML_CPP_LIBRARIES})
  
 target_include_directories(cr-dai-tools PUBLIC include ${depthai_INCLUDE_DIRS})

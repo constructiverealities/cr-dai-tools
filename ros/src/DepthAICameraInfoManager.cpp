@@ -50,18 +50,22 @@ std::shared_ptr<DepthaiCameraInfoManager> DepthaiCameraInfoManager::get(dai::Dev
 
 std::shared_ptr<DepthaiCameraInfoManager>
 DepthaiCameraInfoManager::get(dai::Device &device, dai::CalibrationHandler& calibrationHandler, dai::CameraBoardSocket socket, ros_impl::Node nh,
-                              const std::string &cname, const std::string &url) {
+                              const std::string &cname, const std::string &url, int width, int height,
+                              dai::Point2f topLeftPixelId,
+                              dai::Point2f bottomRightPixelId) {
     std::string key = device.getMxId() + std::to_string((int)socket);
     if(managers.find(key) == managers.end() || managers[key] == 0) {
-        managers[key] = ::std::shared_ptr<DepthaiCameraInfoManager>(new DepthaiCameraInfoManager(device, calibrationHandler, socket, nh, cname, url));
+        managers[key] = ::std::shared_ptr<DepthaiCameraInfoManager>(new DepthaiCameraInfoManager(device, calibrationHandler, socket, nh, cname, url, width, height, topLeftPixelId, bottomRightPixelId));
     }
     return managers[key];
 }
 
 DepthaiCameraInfoManager::DepthaiCameraInfoManager(dai::Device &device, dai::CalibrationHandler& calibrationHandler, dai::CameraBoardSocket socket,
-                                                   ros_impl::Node nh, const std::string &cname, const std::string &url)
+                                                   ros_impl::Node nh, const std::string &cname, const std::string &url, int width, int height,
+                                                   dai::Point2f topLeftPixelId,
+                                                   dai::Point2f bottomRightPixelId)
         : shim::camera_info_manager::CameraInfoManager(nh, cname, url),
-          device(device), calibrationHandler(calibrationHandler), socket(socket),
+          device(device), calibrationHandler(calibrationHandler), socket(socket), width(width), height(height), topLeftPixelId(topLeftPixelId), bottomRightPixelId(bottomRightPixelId),
 #if HAS_ROS2
           broadcaster(nh), buffer(nh->get_clock()),
 #endif
@@ -256,28 +260,42 @@ bool DepthaiCameraInfoManager::loadCalibrationFlash(const std::string &flashURL,
     auto saveData = calibrationHandler.getEepromData();
     auto camera_data = saveData.cameraData[socket];
 
-    ros_impl::sensor_msgs::CameraInfo cameraInfo = { };
-    cameraInfo.distortion_model = "rational_polynomial";
-    cameraInfo.width = camera_data.width;
+    try {
+        auto intrinsics = calibrationHandler.getCameraIntrinsics(socket, width, height);
+        ros_impl::sensor_msgs::CameraInfo cameraInfo = {};
+        cameraInfo.distortion_model = "rational_polynomial";
+        cameraInfo.width = camera_data.width;
 
-    copy(cameraInfo.K, camera_data.intrinsicMatrix);
-    ROS_IMPL_INFO(nh_, "Loading calibration for %s Fx %f Fy %f Cx %f Cy %f", cname.c_str(), cameraInfo.K[0], cameraInfo.K[4],
-             cameraInfo.K[2], cameraInfo.K[5]);
-    copy(cameraInfo.D, camera_data.distortionCoeff);
-    cameraInfo.D.resize(8);
+        copy(cameraInfo.K, camera_data.intrinsicMatrix);
+        ROS_IMPL_INFO(nh_, "Loading calibration for %s Fx %f Fy %f Cx %f Cy %f", cname.c_str(), cameraInfo.K[0],
+                      cameraInfo.K[4],
+                      cameraInfo.K[2], cameraInfo.K[5]);
+        copy(cameraInfo.D, camera_data.distortionCoeff);
+        cameraInfo.D.resize(8);
 
-    copy43(cameraInfo.P, camera_data.intrinsicMatrix);
-    cameraInfo.R[0] = cameraInfo.R[4] = cameraInfo.R[8] = 1;
-    cameraInfo.height = camera_data.height;
-    if(cameraInfo.height == 0) cameraInfo.height = 172;
-    if(cameraInfo.width == 0) cameraInfo.width = 224;
-    assert(cname != "");
-    cameraInfo.header.frame_id = cname;
-    cameraInfo.header.stamp = ros_impl::now(nh_);
-    //cameraInfo.header.seq = 1;
+        copy43(cameraInfo.P, camera_data.intrinsicMatrix);
+        cameraInfo.R[0] = cameraInfo.R[4] = cameraInfo.R[8] = 1;
+        cameraInfo.height = camera_data.height;
+        if (cameraInfo.height == 0) cameraInfo.height = 240;
+        if (cameraInfo.width == 0) cameraInfo.width = 640;
+        assert(cname != "");
+        cameraInfo.header.frame_id = cname;
+        cameraInfo.header.stamp = ros_impl::now(nh_);
+        //cameraInfo.header.seq = 1;
 
-    transmit_eeprom(nh_, device, calibrationHandler);
+        auto baseline_m = calibrationHandler.getBaselineDistance(calibrationHandler.getStereoRightCameraId(), calibrationHandler.getStereoLeftCameraId()) * .01;
+        if(socket == calibrationHandler.getStereoLeftCameraId()) {
+            cameraInfo.P[3] = - cameraInfo.P[0] * baseline_m;
+            copy(cameraInfo.R, saveData.stereoRectificationData.rectifiedRotationRight);
+        } else if (socket == calibrationHandler.getStereoRightCameraId()) {
+            copy(cameraInfo.R, saveData.stereoRectificationData.rectifiedRotationLeft);
+        }
+        transmit_eeprom(nh_, device, calibrationHandler);
 
-    this->setCameraInfo(cameraInfo);
-    return true;
+        this->setCameraInfo(cameraInfo);
+        return true;
+    } catch(std::exception& e) {
+        ROS_IMPL_WARN(nh_, "Could not load calibration: %s", e.what());
+        return false;
+    }
 }

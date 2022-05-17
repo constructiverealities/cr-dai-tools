@@ -97,7 +97,9 @@ if(BUILD_ROS)
     include_directories(include)
 
     add_compile_options(-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)
-    add_library(cr-dai-rosnode-lib STATIC src/PipelinePublisher.cc src/ImagePublisher.cc src/ToFDepthPublisher.cc src/IMUPublisher.cc src/NNPublisher.cc ./src/DepthAICameraInfoManager.cpp ./src/virtual_camera_info_manager.cc ./src/ros_impl.cc)
+    add_library(cr-dai-rosnode-lib STATIC src/PipelinePublisher.cc src/ImagePublisher.cc src/ToFDepthPublisher.cc
+            src/IMUPublisher.cc src/NNPublisher.cc ./src/DepthAICameraInfoManager.cpp ./src/virtual_camera_info_manager.cc
+            ./src/ros_impl.cc ./src/DepthPublisher.cc)
     target_link_libraries(cr-dai-rosnode-lib cr-dai-tools ${ROS_LIBRARIES} depthai::core)
     target_include_directories(cr-dai-rosnode-lib PUBLIC include ${depthai_INCLUDE_DIRS})
     if(NOT "${ROS_EXPORT_TARGETS}" STREQUAL "")

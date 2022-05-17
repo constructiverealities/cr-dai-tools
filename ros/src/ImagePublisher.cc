@@ -128,9 +128,8 @@ void cr::dai_rosnode::ImagePublisher::operator()(std::shared_ptr<dai::ImgFrame> 
             imageBuffer.header = header;
             publisher->publish(imageBuffer);
 
-            auto cameraInfo = _cameraInfoData;
-            cameraInfo.header = header;
-            _cameraInfoPub->publish(cameraInfo);
+            _cameraInfoData.header = header;
+            _cameraInfoPub->publish(_cameraInfoData);
         }
 
 #ifdef HAS_IDL_SUPPORT

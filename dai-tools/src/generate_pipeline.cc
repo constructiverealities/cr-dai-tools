@@ -34,7 +34,7 @@ namespace cr {
                         << "Warning: OV9*82 camera can not reliably be differentiated between color and mono. Override `HandleOV9_82` with the correct logic for your board"
                         << std::endl;
 
-                metaInfo.SensorInfo[features.socket] = SensorMetaInfo("OV9*82", isColor ? dai::CameraSensorType::COLOR : dai::CameraSensorType::MONO, 30, dai::CameraProperties::SensorResolution::THE_720_P);
+                metaInfo.SensorInfo[features.socket] = SensorMetaInfo("OV9*82", isColor ? dai::CameraSensorType::COLOR : dai::CameraSensorType::MONO, 30, dai::CameraProperties::SensorResolution::THE_800_P);
             } else {
                 isColor = sensorInfo->second.SensorType == dai::CameraSensorType::COLOR;
             }
@@ -52,7 +52,6 @@ namespace cr {
             auto rgbPicture = pipeline->create<dai::node::ColorCamera>();
             rgbPicture->setFps(sensorInfo.FPS);
             rgbPicture->initialControl.setManualFocus(135);
-            //rgbPicture->initialControl.setManualExposure(10000, 1597);
             rgbPicture->setBoardSocket(features.socket);
             rgbPicture->setResolution(sensorInfo.ColorResolution());
 
@@ -71,11 +70,11 @@ namespace cr {
             mono->setBoardSocket(features.socket);
             mono->setFps(sensorInfo.FPS);
             mono->setResolution(sensorInfo.MonoResolution());
-            //mono->initialControl.setManualExposure(1000, 1599);
 
             std::string name = "mono";
             if(stereo_depth_node) {
                 mono->out.link(features.socket == dai::CameraBoardSocket::LEFT ? stereo_depth_node->left : stereo_depth_node->right);
+                mono->setResolution(dai::MonoCameraProperties::SensorResolution::THE_800_P);
                 name = features.socket == dai::CameraBoardSocket::LEFT ? "left" : "right";
             }
             auto xoutVideo = pipeline->create<dai::node::XLinkOut>();
@@ -133,21 +132,26 @@ namespace cr {
 
             stereo_depth_node->initialConfig.setLeftRightCheckThreshold(10);
             stereo_depth_node->initialConfig.setConfidenceThreshold(220);
+            stereo_depth_node->initialConfig.setMedianFilter(dai::MedianFilter::KERNEL_7x7);
             stereo_depth_node->setLeftRightCheck(true);
             stereo_depth_node->setExtendedDisparity(false);
             stereo_depth_node->setSubpixel(true);
-            stereo_depth_node->initialConfig.setMedianFilter(dai::MedianFilter::KERNEL_7x7);
             stereo_depth_node->setRuntimeModeSwitch(true);
 
-            {
-                auto xout = pipeline->create<dai::node::XLinkOut>();
-                xout->setStreamName("stereo_depth");
-                stereo_depth_node->depth.link(xout->input);
-            }
-            {
-                auto xout = pipeline->create<dai::node::XLinkOut>();
-                xout->setStreamName("confidence_map");
-                stereo_depth_node->confidenceMap.link(xout->input);
+            using output_t = decltype(&stereo_depth_node->depth);
+            std::list<std::pair<std::string, output_t>> outs = {
+                    {"depth",     &stereo_depth_node->depth},
+                    {"confidence_map", &stereo_depth_node->confidenceMap},
+                    {"left", &stereo_depth_node->syncedLeft},
+                    {"right", &stereo_depth_node->syncedRight},
+                    {"rectLeft", &stereo_depth_node->rectifiedLeft},
+                    {"rectRight", &stereo_depth_node->rectifiedRight},
+            };
+
+            for (auto &kv : outs) {
+                auto xoutVideo = pipeline->create<dai::node::XLinkOut>();
+                xoutVideo->setStreamName(kv.first );
+                kv.second->link(xoutVideo->input);
             }
         }
 
@@ -178,6 +182,7 @@ namespace cr {
 
             auto factory = std::map<std::string, std::function<void(const CameraFeatures &features)>>(
             {
+                    {"OZT0358", [this](const CameraFeatures &features){this->HandleToF(features);}},
                     {"MTP006", [this](const CameraFeatures &features){this->HandleToF(features);}},
                     {"OV9*82", [this](const CameraFeatures &features){this->HandleOV9_82(features);}},
                     {"IMX378", [this](const CameraFeatures &features){this->HandleIMX378(features);}},

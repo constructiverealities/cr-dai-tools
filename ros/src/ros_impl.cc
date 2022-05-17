@@ -30,6 +30,8 @@ namespace ros_impl {
     }
 
     Node make_node(const Node &p, const std::string &ns) {
+        if(!p)
+            return make_node(ns);
         return std::make_shared<ros::NodeHandle>(*p, ns);
     }
 
@@ -39,7 +41,7 @@ namespace ros_impl {
 
     Node init(int argc, const char *const *argv, const std::string &name) {
         ros::init(argc, (char**)argv, name, 0);
-        return make_node(name);
+        return nullptr;
     }
 
     Time now(const Node &node) {
