@@ -11,6 +11,7 @@ void cr::dai_rosnode::ToFDepthPublisher::publishCalibrationBlob(const dai::ImgFr
 
 void cr::dai_rosnode::ToFDepthPublisher::operator()(std::shared_ptr<dai::ImgFrame> msg) {
     if (msg->getWidth() == 1) {
+        ROS_IMPL_INFO(_nh, "Got calibration blob for ToF");
         publishCalibrationBlob(*msg);
         return;
     }

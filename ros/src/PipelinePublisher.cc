@@ -399,20 +399,24 @@ namespace cr {
 
         void PipelinePublisher::setupDeviceServer() {
 #ifdef HAS_DYNAMIC_RECONFIGURE
+
             auto server = std::make_shared<dynamic_reconfigure::Server<cr_dai_ros::DeviceControlConfig>>(*_device_node);
             ROS_INFO("Setting up device server at %s",  _device_node->getNamespace().c_str());
             auto current_config = std::make_shared<cr_dai_ros::DeviceControlConfig>();
             server->getConfigDefault(*current_config);
+            current_config->LogLevel = static_cast<int>(_device.getLogOutputLevel());
+
             keep_alive.push_back(current_config);
 
             auto triggger_update = [=](cr_dai_ros::DeviceControlConfig& cfg, unsigned level) {
-                if(level & 1) _device.setIrFloodLightBrightness(cfg.IrFloodLightBrightness_right, 0x2);
-                if(level & 2) _device.setIrFloodLightBrightness(cfg.IrFloodLightBrightness_left, 0x1);
-                if(level & 4) _device.setIrLaserDotProjectorBrightness(cfg.IrLaserDotProjectorBrightness_right, 0x2);
-                if(level & 8) _device.setIrLaserDotProjectorBrightness(cfg.IrLaserDotProjectorBrightness_left, 0x1);
+                if(level & 1) _device.setIrFloodLightBrightness((float)cfg.IrFloodLightBrightness_right, 0x2);
+                if(level & 2) _device.setIrFloodLightBrightness((float)cfg.IrFloodLightBrightness_left, 0x1);
+                if(level & 4) _device.setIrLaserDotProjectorBrightness((float)cfg.IrLaserDotProjectorBrightness_right, 0x2);
+                if(level & 8) _device.setIrLaserDotProjectorBrightness((float)cfg.IrLaserDotProjectorBrightness_left, 0x1);
                 if(level & 16) {
-                    _device.setLogLevel(static_cast<dai::LogLevel>(cfg.LogLevel));
-                    _device.setLogOutputLevel(static_cast<dai::LogLevel>(cfg.LogLevel));
+                    ROS_IMPL_WARN(_device_node, "Setting log level to %d", cfg.LogLevel);
+                    //_device.setLogLevel(static_cast<dai::LogLevel>(cfg.LogLevel));
+                    //_device.setLogOutputLevel(static_cast<dai::LogLevel>(cfg.LogLevel));
                 }
 
             };
