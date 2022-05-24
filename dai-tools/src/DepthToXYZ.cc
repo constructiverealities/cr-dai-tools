@@ -52,7 +52,8 @@ static inline void xyz_from_depth(float depth, const float * zxy, float *  xyz) 
 cr::dai_tools::DepthToXYZ::DepthToXYZ(int width, int height, const std::vector<double> &LP,
                                       const std::vector<double> &D) : width(width), height(height) {
     pc_map.resize(width * height * 2);
-    initUndistortRectifyMap(&LP[0], &D[0],  width, height, &pc_map[0]);
+    if(D.size() >= 8)
+        initUndistortRectifyMap(&LP[0], &D[0],  width, height, &pc_map[0]);
 }
 
 void cr::dai_tools::DepthToXYZ::operator()(const uint16_t *depth, float *pc) {

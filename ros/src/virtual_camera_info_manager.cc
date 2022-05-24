@@ -39,7 +39,7 @@ namespace shim {
                 loaded_cam_info_(false)
         {
             // register callback for camera calibration service request
-            ros_impl::create_service<ros_impl::sensor_msgs::SetCameraInfo>(nh_, "set_camera_info", &CameraInfoManager::setCameraInfoService, this);
+            info_service_ = ros_impl::create_service<ros_impl::sensor_msgs::SetCameraInfo>(nh_, "set_camera_info", &CameraInfoManager::setCameraInfoService, this);
         }
 
 /** Get the current CameraInfo data.

@@ -1,6 +1,7 @@
 #include "cr/dai-tools/ros_headers.h"
 #include <memory>
 #include "cr/dai-tools/DepthAICameraInfoManager.hpp"
+#include "cr/dai-tools/Tx.h"
 
 template<typename D_T>
 static void copy(D_T &d, const std::vector<float> &s) {
@@ -114,28 +115,8 @@ static void transmit_eeprom(const ros_impl::Node& n, dai::Device &device, dai::C
         auto cname = daiInfo->cname();
         try {
             auto extrinsics = calibrationData.getCameraExtrinsics( next_socket, kv.second->Socket());
-            //auto extrinsics = calibrationData.getCameraExtrinsics( kv.second->socket, next_socket);
-            ros_impl::geometry_msgs::TransformStamped pose_msg;
-            //pose_msg.header.seq = 1;
+            auto pose_msg = cr::dai_tools::tx::daiExtrinsics2Tx(extrinsics, cname, kv.second->cname());
             pose_msg.header.stamp = ros_impl::now(n);
-            pose_msg.header.frame_id = cname;
-            pose_msg.child_frame_id = kv.second->cname();
-
-            pose_msg.transform.translation.x = extrinsics[0][3] * .01;
-            pose_msg.transform.translation.y = extrinsics[1][3] * .01;
-            pose_msg.transform.translation.z = extrinsics[2][3] * .01;
-            tf2::Matrix3x3 m2;
-            for (int i = 0; i < 3; i++) {
-                for (int j = 0; j < 3; j++) {
-                    m2[i][j] = extrinsics[i][j];
-                }
-            }
-            tf2::Quaternion q;
-            m2.getRotation(q);
-            pose_msg.transform.rotation.x = q.x();
-            pose_msg.transform.rotation.y = q.y();
-            pose_msg.transform.rotation.z = q.z();
-            pose_msg.transform.rotation.w = q.w();
 
             device_transforms[pose_msg.child_frame_id] = pose_msg;
             //tfBroadcaster().sendTransform(pose_msg);
@@ -187,10 +168,11 @@ bool saveAllCalibrationData(const ros_impl::Node& n, dai::Device &device, dai::C
             assert(thisFrame != "" && nextFrame != "");
             std::string error_msg;
 
+            auto lookupTime = ros_impl::Time(0);
             /// NOTE: lookupTransform is target, source. setCameraExtrinsics is source, target.
-            if(manager->buffer.canTransform(nextFrame, thisFrame, ros_impl::now(n))) {
+            if(manager->buffer.canTransform(nextFrame, thisFrame, lookupTime), &error_msg) {
                 //auto tx = buffer.lookupTransform(nextFrame, thisFrame, ros::Time(0));
-                auto tx = manager->buffer.lookupTransform(thisFrame, nextFrame, ros_impl::now(n));
+                auto tx = manager->buffer.lookupTransform(thisFrame, nextFrame, lookupTime);
                 tf2::Matrix3x3 rot;
                 rot.setRotation(tf2::Quaternion(tx.transform.rotation.x,
                                                tx.transform.rotation.y,
@@ -207,7 +189,7 @@ bool saveAllCalibrationData(const ros_impl::Node& n, dai::Device &device, dai::C
                 copy(dai_rot, rot);
                 calibrationHandler.setCameraExtrinsics(socket, static_cast<dai::CameraBoardSocket>(next_socket), dai_rot, translation, translation);
             } else {
-                ROS_IMPL_WARN(n, "%s", error_msg.c_str());
+                ROS_IMPL_WARN(n, "Could not find transform between %s and %s (%s)", nextFrame.c_str(), thisFrame.c_str(), error_msg.c_str());
                 return false;
             }
         }
@@ -260,11 +242,17 @@ bool DepthaiCameraInfoManager::loadCalibrationFlash(const std::string &flashURL,
     auto saveData = calibrationHandler.getEepromData();
     auto camera_data = saveData.cameraData[socket];
 
+    ros_impl::sensor_msgs::CameraInfo cameraInfo = {};
+    cameraInfo.distortion_model = "rational_polynomial";
+    cameraInfo.width = camera_data.width;
+    cameraInfo.height = camera_data.height;
+
+    cameraInfo.R[0] = cameraInfo.R[4] = cameraInfo.R[8] = 1;
+    cameraInfo.header.frame_id = cname;
+    cameraInfo.header.stamp = ros_impl::now(nh_);
+
     try {
         auto intrinsics = calibrationHandler.getCameraIntrinsics(socket, width, height);
-        ros_impl::sensor_msgs::CameraInfo cameraInfo = {};
-        cameraInfo.distortion_model = "rational_polynomial";
-        cameraInfo.width = camera_data.width;
 
         copy(cameraInfo.K, camera_data.intrinsicMatrix);
         ROS_IMPL_INFO(nh_, "Loading calibration for %s Fx %f Fy %f Cx %f Cy %f", cname.c_str(), cameraInfo.K[0],
@@ -272,19 +260,11 @@ bool DepthaiCameraInfoManager::loadCalibrationFlash(const std::string &flashURL,
                       cameraInfo.K[2], cameraInfo.K[5]);
         copy(cameraInfo.D, camera_data.distortionCoeff);
         cameraInfo.D.resize(8);
-
         copy43(cameraInfo.P, camera_data.intrinsicMatrix);
-        cameraInfo.R[0] = cameraInfo.R[4] = cameraInfo.R[8] = 1;
-        cameraInfo.height = camera_data.height;
-        if (cameraInfo.height == 0) cameraInfo.height = 240;
-        if (cameraInfo.width == 0) cameraInfo.width = 640;
         assert(cname != "");
-        cameraInfo.header.frame_id = cname;
-        cameraInfo.header.stamp = ros_impl::now(nh_);
-        //cameraInfo.header.seq = 1;
 
-        auto baseline_m = calibrationHandler.getBaselineDistance(calibrationHandler.getStereoRightCameraId(), calibrationHandler.getStereoLeftCameraId()) * .01;
         if(socket == calibrationHandler.getStereoLeftCameraId()) {
+            auto baseline_m = calibrationHandler.getBaselineDistance(calibrationHandler.getStereoRightCameraId(), calibrationHandler.getStereoLeftCameraId()) * .01;
             cameraInfo.P[3] = - cameraInfo.P[0] * baseline_m;
             copy(cameraInfo.R, saveData.stereoRectificationData.rectifiedRotationRight);
         } else if (socket == calibrationHandler.getStereoRightCameraId()) {
@@ -295,7 +275,8 @@ bool DepthaiCameraInfoManager::loadCalibrationFlash(const std::string &flashURL,
         this->setCameraInfo(cameraInfo);
         return true;
     } catch(std::exception& e) {
-        ROS_IMPL_WARN(nh_, "Could not load calibration: %s", e.what());
-        return false;
+        ROS_IMPL_WARN(nh_, "Could not load calibration: %s %s", cname.c_str(), e.what());
+        this->setCameraInfo(cameraInfo);
+        return true;
     }
 }

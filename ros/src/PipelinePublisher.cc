@@ -7,6 +7,7 @@
 #include "cr/dai-tools/ToFDepthPublisher.h"
 #include "cr/dai-tools/IMUPublisher.h"
 #include "cr/dai-tools/NNPublisher.h"
+#include "cr/dai-tools/Tx.h"
 
 #include <utility>
 namespace cr {
@@ -218,11 +219,15 @@ namespace cr {
         bool PipelinePublisher::Visit(SetupPublishers, std::shared_ptr<dai::node::XLinkOut> xLinkOut,
                    const std::string& inputName, std::shared_ptr<dai::node::IMU> inputNode) {
             auto queue = getOutputQueue(xLinkOut, 4, false);
+            auto ns = default_frame_mapping()[dai::CameraBoardSocket::CAM_A];
+            auto cname = "dai_" + mxId + "_" + ns;
+
             make_publisher<IMUPublisher>(
                     queue,
                     _device_node,
-                    30,
-                    xLinkOut);
+                    _calibrationHandler,
+                    xLinkOut, cname);
+
             return true;
         }
 
@@ -245,7 +250,7 @@ namespace cr {
                    const std::string& inputName, std::shared_ptr<dai::node::ToF> inputNode) {
             auto queue = getOutputQueue(xLinkOut, 4, false);
 
-            int width = 224, height = 172;
+            int width = -1, height = -1;
             auto socket = dai::CameraBoardSocket::RGB;
             auto cameraInfo = CameraInfo(socket, width, height);
             if(inputName == "out") {

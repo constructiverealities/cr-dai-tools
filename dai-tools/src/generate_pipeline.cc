@@ -92,11 +92,28 @@ namespace cr {
             printf("Creating raw camera on socket %d\n", (int)features.socket);
         }
 
+        float GetFPS(const SensorMetaInfo& sensorMetaInfo) {
+            std::string env_key = "CR_" + sensorMetaInfo.SensorName + "_FPS";
+            if(auto fps = std::getenv(env_key.c_str())) {
+                return std::stod(fps);
+            }
+            return sensorMetaInfo.FPS;
+        }
+
         void PipelineBuilder::HandleToF(const CameraFeatures &features) {
+            SensorMetaInfo sensorMetaInfo;
+            if(metaInfo.SensorInfo.find(features.socket) == metaInfo.SensorInfo.end()) {
+                sensorMetaInfo = metaInfo.SensorInfo[features.socket] =
+                        SensorMetaInfo(features.sensorName,dai::CameraSensorType::TOF,
+                                       30, dai::CameraProperties::SensorResolution::THE_400_P);
+            }
+
             auto xinPicture = pipeline->create<dai::node::Camera>();
             xinPicture->setBoardSocket(features.socket);
+            xinPicture->setFps(GetFPS(sensorMetaInfo));
+
             auto tof = pipeline->create<dai::node::ToF>();
-            metaInfo.SensorInfo[features.socket] = SensorMetaInfo("MTP006", dai::CameraSensorType::TOF, 30, dai::CameraProperties::SensorResolution::THE_400_P);
+
 
             using output_t = decltype(&tof->out);
             std::list<std::pair<std::string, output_t>> outs = {
@@ -140,7 +157,7 @@ namespace cr {
 
             using output_t = decltype(&stereo_depth_node->depth);
             std::list<std::pair<std::string, output_t>> outs = {
-                    {"depth",     &stereo_depth_node->depth},
+                    {"stereo_depth",     &stereo_depth_node->depth},
                     {"confidence_map", &stereo_depth_node->confidenceMap},
                     {"left", &stereo_depth_node->syncedLeft},
                     {"right", &stereo_depth_node->syncedRight},
@@ -233,6 +250,7 @@ namespace cr {
             auto imuNode = pipeline->create<dai::node::IMU>();
             imuNode->enableIMUSensor({dai::IMUSensor::ROTATION_VECTOR, dai::IMUSensor::ACCELEROMETER_RAW, dai::IMUSensor::GYROSCOPE_RAW}, 400);
             imuNode->setBatchReportThreshold(1);
+
             auto xout = pipeline->create<dai::node::XLinkOut>();
             xout->setStreamName("imu");
             imuNode->out.link(xout->input);
