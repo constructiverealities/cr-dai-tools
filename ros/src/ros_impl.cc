@@ -48,9 +48,18 @@ namespace ros_impl {
         return Time::now();
     }
 
+    bool spinOnce(const Node &n) {
+        ros::spinOnce();
+        return ok(n);
+    }
+
+    bool ok(const Node &n) {
+        return ros::ok();
+    }
 
     const char *Namespace(const Node &n) { return n->getNamespace().c_str(); }
 #endif
+
 }
 
 #ifdef HAS_ROS2

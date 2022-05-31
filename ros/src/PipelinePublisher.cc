@@ -37,6 +37,11 @@ namespace cr {
                 self->setupCameraControlServer(stereo, "stereo");
                 return true;
             }
+            bool Visit(std::shared_ptr <dai::node::ToF> tof) override {
+                self->setupCameraControlServer(tof, "tof");
+                return true;
+            }
+
         };
 
         PipelinePublisher::PipelinePublisher(::ros_impl::Node& pnh,
@@ -126,6 +131,16 @@ namespace cr {
         }
 
 
+        void PipelinePublisher::setupCameraControlQueue(std::shared_ptr<dai::node::ToF> tof, const std::string& prefix) {
+#ifdef HAS_DYNAMIC_RECONFIGURE
+            auto configIn = tof->getParentPipeline().template create<dai::node::XLinkIn>();
+            auto name = prefix;
+            ROS_IMPL_INFO(_device_node,"Setting up camera control xlinks for %s", name.c_str());
+            configIn->setStreamName(name + "_inputControl");
+            configIn->out.link(tof->inputConfig);
+#endif
+        }
+
         template<typename T> void PipelinePublisher::setupCameraControlQueue(std::shared_ptr<T> cam, const std::string& prefix) {
 #ifdef HAS_DYNAMIC_RECONFIGURE
             auto configIn = cam->getParentPipeline().template create<dai::node::XLinkIn>();
@@ -136,6 +151,40 @@ namespace cr {
 #endif
         }
 
+        void PipelinePublisher::setupCameraControlServer(std::shared_ptr<dai::node::ToF> cam, const std::string& prefix) {
+#ifdef HAS_DYNAMIC_RECONFIGURE
+            auto socket = dai::CameraBoardSocket::CAM_A;
+            auto name = prefix;
+            ROS_IMPL_INFO(_device_node, "Setting up ToF control server for %s", name.c_str());
+            auto configQueue = _device.getInputQueue(name + "_inputControl");
+            auto n = getNodeHandle(socket);
+            auto server = std::make_shared<dynamic_reconfigure::Server<cr_dai_ros::ToFControlConfig>>(*n);
+
+            auto current_config = std::make_shared<cr_dai_ros::ToFControlConfig>();
+            server->getConfigDefault(*current_config);
+            keep_alive.push_back(current_config);
+
+            auto triggger_update = [=](cr_dai_ros::ToFControlConfig& cfg, unsigned level) {
+                dai::ToFConfig tofCfg;
+                tofCfg.get().albedoCutoffAmplitude = cfg.albedo_cutoff_amp;
+                tofCfg.get().maxAlbedo = cfg.max_albedo_param;
+                tofCfg.get().minAlbedo = cfg.min_albedo_param;
+                tofCfg.get().maxAsymmetry = cfg.max_asymmetry;
+                tofCfg.get().maxDistance = cfg.max_dist_param;
+                tofCfg.get().minDistance = cfg.min_dist_param;
+                tofCfg.get().minAmplitude = cfg.min_amp_param;
+                tofCfg.get().maxError = cfg.max_error_param;
+                tofCfg.get().useLoadedFilter = cfg.use_loaded_filter;
+                configQueue->send(tofCfg);
+            };
+
+            server->setCallback([=](cr_dai_ros::ToFControlConfig& cfg, unsigned level) {
+                triggger_update(cfg, level);
+            });
+
+            keep_alive.push_back(server);
+#endif
+        }
         void PipelinePublisher::setupCameraControlServer(dai::CameraBoardSocket socket, const std::string& prefix) {
 #ifdef HAS_DYNAMIC_RECONFIGURE
             auto name = prefix + std::to_string((int)socket);
@@ -204,7 +253,11 @@ namespace cr {
             else if(auto mono = std::dynamic_pointer_cast<dai::node::MonoCamera>(node)) {
                 setupCameraControlQueue(mono, "mono");
             }
+            else if(auto tof = std::dynamic_pointer_cast<dai::node::ToF>(node)) {
+                setupCameraControlQueue(tof, "tof");
+            }
         }
+
         bool PipelinePublisher::Visit(SetupPublishers, std::shared_ptr<dai::node::XLinkOut> xLinkOut,
                    const std::string& inputName, std::shared_ptr<dai::node::NeuralNetwork> ptr) {
             auto queue = getOutputQueue(xLinkOut, 4, false);

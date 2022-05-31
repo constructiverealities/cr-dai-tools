@@ -30,9 +30,11 @@ namespace cr {
             std::vector<std::shared_ptr<void>> keep_alive;
             dai::CalibrationHandler _calibrationHandler;
 
+            void setupCameraControlQueue(std::shared_ptr<dai::node::ToF> tof, const std::string& prefix);
             template<typename T> void setupCameraControlQueue(std::shared_ptr<T> cam, const std::string& prefix);
 
             void setupCameraControlServer(dai::CameraBoardSocket socket, const std::string& prefix);
+            void setupCameraControlServer(std::shared_ptr<dai::node::ToF> cam, const std::string& prefix);
             template<typename T> void setupCameraControlServer(std::shared_ptr<T> cam, const std::string& prefix);
 
             void setupCameraControlServer(std::shared_ptr<dai::node::StereoDepth> cam, const std::string& prefix);

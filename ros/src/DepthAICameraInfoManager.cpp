@@ -61,16 +61,32 @@ DepthaiCameraInfoManager::get(dai::Device &device, dai::CalibrationHandler& cali
     return managers[key];
 }
 
+static tf2_ros::Buffer& buffer(ros_impl::Node nh) {
+    std::unique_ptr<tf2_ros::Buffer> buffer_ptr;
+    std::unique_ptr<tf2_ros::TransformListener> listener;
+
+    if(!buffer_ptr) {
+#if HAS_ROS2
+        buffer_ptr = std::make_unique<tf2_ros::Buffer>(nh->get_clock());
+#else
+        buffer_ptr = std::make_unique<tf2_ros::Buffer>();
+#endif
+        listener = std::make_unique<tf2_ros::TransformListener>(*buffer_ptr);
+    }
+
+    return *buffer_ptr;
+}
+
 DepthaiCameraInfoManager::DepthaiCameraInfoManager(dai::Device &device, dai::CalibrationHandler& calibrationHandler, dai::CameraBoardSocket socket,
                                                    ros_impl::Node nh, const std::string &cname, const std::string &url, int width, int height,
                                                    dai::Point2f topLeftPixelId,
                                                    dai::Point2f bottomRightPixelId)
         : shim::camera_info_manager::CameraInfoManager(nh, cname, url),
-          device(device), calibrationHandler(calibrationHandler), socket(socket), width(width), height(height), topLeftPixelId(topLeftPixelId), bottomRightPixelId(bottomRightPixelId),
+          device(device), calibrationHandler(calibrationHandler), socket(socket), width(width), height(height), topLeftPixelId(topLeftPixelId),
 #if HAS_ROS2
-          broadcaster(nh), buffer(nh->get_clock()),
+          broadcaster(nh),
 #endif
-          listener(buffer) {
+          bottomRightPixelId(bottomRightPixelId) {
     ROS_IMPL_INFO(nh, "Creating DAI camera info manager at %s/%s", ros_impl::Namespace(nh), cname.c_str());
     spin_timer = ros_impl::create_wall_timer(nh, .1, [this]() { this->spin(); });
     //spin_timer = nh.createTimer(ros::Duration(0.1),
@@ -170,9 +186,9 @@ bool saveAllCalibrationData(const ros_impl::Node& n, dai::Device &device, dai::C
 
             auto lookupTime = ros_impl::Time(0);
             /// NOTE: lookupTransform is target, source. setCameraExtrinsics is source, target.
-            if(manager->buffer.canTransform(nextFrame, thisFrame, lookupTime), &error_msg) {
+            if(buffer(n).canTransform(nextFrame, thisFrame, lookupTime), &error_msg) {
                 //auto tx = buffer.lookupTransform(nextFrame, thisFrame, ros::Time(0));
-                auto tx = manager->buffer.lookupTransform(thisFrame, nextFrame, lookupTime);
+                auto tx = buffer(n).lookupTransform(thisFrame, nextFrame, lookupTime);
                 tf2::Matrix3x3 rot;
                 rot.setRotation(tf2::Quaternion(tx.transform.rotation.x,
                                                tx.transform.rotation.y,
@@ -206,23 +222,23 @@ bool saveAllCalibrationData(const ros_impl::Node& n, dai::Device &device, dai::C
     }
 }
 
+static bool transmit_transforms = true;
 void DepthaiCameraInfoManager::spin() {
-//
-//    ros::V_string nodes;
-//    ros::master::getNodes(nodes);
-//    bool has_broadcast_node = false;
-//    for(auto& node : nodes) {
-//        if(node == "/broadcast_tf_graph") {
-//            has_broadcast_node = true;
-//        }
-//    }
-    bool has_broadcast_node = false;
-    if(!has_broadcast_node) {
+    if(transmit_transforms) {
         for(auto& kv : device_transforms) {
             kv.second.header.stamp = ros_impl::now(nh_);
             broadcaster.sendTransform(kv.second);
         }
     }
+}
+
+bool DepthaiCameraInfoManager::setCameraInfoService(ros_impl::sensor_msgs::SetCameraInfo::Request &req, ros_impl::sensor_msgs::SetCameraInfo::Response &rsp) {
+    if(transmit_transforms) {
+        transmit_transforms = false;
+        buffer(nh_).clear();
+        ROS_IMPL_WARN(nh_, "set_camera_info invoked; turning off transmit mode on transforms and clearing applicable buffers");
+    }
+    return CameraInfoManager::setCameraInfoService(req, rsp);
 }
 
 bool

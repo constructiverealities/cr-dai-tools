@@ -35,6 +35,7 @@
 #include "cr_dai_ros/StereoDepthConfig.h"
 #include "cr_dai_ros/CameraControlConfig.h"
 #include "cr_dai_ros/DeviceControlConfig.h"
+#include "cr_dai_ros/ToFControlConfig.h"
 #include <image_transport/image_transport.h>
 
 #include <std_msgs/UInt8MultiArray.h>
@@ -51,6 +52,10 @@ namespace ros_impl {
     typedef std::shared_ptr<ros::NodeHandle> Node;
     typedef std::shared_ptr<ros::Timer> Timer;
     void spin(const Node& n);
+
+    bool ok(const Node& n);
+
+    bool spinOnce(const Node& n);
 
     Node make_node(const Node& p, const std::string& ns);
     Node make_node(const std::string& ns);

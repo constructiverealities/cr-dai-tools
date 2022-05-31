@@ -39,7 +39,11 @@ int main(int argc, char** argv) {
     auto publisher = cr::dai_rosnode::PipelinePublisher(n, d, *pipeline);
 
     ROS_IMPL_INFO(n, "Setup done, wait...");
-    ros_impl::spin(g);
+
+    while(ros_impl::spinOnce(g) && !d->isClosed() && d->isPipelineRunning()) {
+
+    }
+
 
     return 0;
 }

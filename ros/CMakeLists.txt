@@ -70,6 +70,7 @@ elseif(catkin_FOUND)
             cfg/StereoDepth.cfg
             cfg/CameraControl.cfg
             cfg/DeviceControl.cfg
+            cfg/ToFControl.cfg
     )
 
     catkin_package(

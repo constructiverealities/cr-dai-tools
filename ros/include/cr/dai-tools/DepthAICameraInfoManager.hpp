@@ -17,6 +17,8 @@ protected:
     int width; int height;
     dai::Point2f topLeftPixelId;
     dai::Point2f bottomRightPixelId;
+    bool setCameraInfoService(ros_impl::sensor_msgs::SetCameraInfo::Request &req, ros_impl::sensor_msgs::SetCameraInfo::Response &rsp) override;
+
     bool loadCalibrationFlash(const std::string &flashURL, const std::string &cname) override;
 
     bool saveCalibrationFlash(const ros_impl::sensor_msgs::CameraInfo &new_info, const std::string &flashURL,
@@ -37,7 +39,5 @@ public:
                                                          dai::Point2f bottomRightPixelId = { });
     static std::shared_ptr<DepthaiCameraInfoManager> get(dai::Device &device, enum dai::CameraBoardSocket socket);
 
-    tf2_ros::Buffer buffer;
-    tf2_ros::TransformListener listener;
 
 };

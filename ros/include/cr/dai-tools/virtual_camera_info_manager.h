@@ -59,7 +59,7 @@ namespace shim {
                         virtual bool saveCalibrationFlash(const ros_impl::sensor_msgs::CameraInfo &new_info,
                         const std::string &flashURL,
                         const std::string &cname);
-                        virtual bool setCameraInfoService(ros_impl::sensor_msgs::SetCameraInfo::Request &req, ros_impl::sensor_msgs::SetCameraInfo::Response &rsp);
+            virtual bool setCameraInfoService(ros_impl::sensor_msgs::SetCameraInfo::Request &req, ros_impl::sensor_msgs::SetCameraInfo::Response &rsp);
 
                         /** @brief mutual exclusion lock for private data
                          *
