@@ -42,19 +42,19 @@ static void copy43(D_T &d, const std::vector<std::vector<float>> &s) {
 
 static std::map<std::string, std::shared_ptr<DepthaiCameraInfoManager>> managers;
 
-std::shared_ptr<DepthaiCameraInfoManager> DepthaiCameraInfoManager::get(dai::Device &device, enum dai::CameraBoardSocket socket) {
-    std::string key = device.getMxId() + std::to_string((int)socket);
+std::shared_ptr<DepthaiCameraInfoManager> DepthaiCameraInfoManager::get(const std::shared_ptr<dai::Device> &device, enum dai::CameraBoardSocket socket) {
+    std::string key = device->getMxId() + std::to_string((int)socket);
     return managers[key];
 }
 
 
 
 std::shared_ptr<DepthaiCameraInfoManager>
-DepthaiCameraInfoManager::get(dai::Device &device, dai::CalibrationHandler& calibrationHandler, dai::CameraBoardSocket socket, ros_impl::Node nh,
+DepthaiCameraInfoManager::get(const std::shared_ptr<dai::Device> &device, dai::CalibrationHandler& calibrationHandler, dai::CameraBoardSocket socket, ros_impl::Node nh,
                               const std::string &cname, const std::string &url, int width, int height,
                               dai::Point2f topLeftPixelId,
                               dai::Point2f bottomRightPixelId) {
-    std::string key = device.getMxId() + std::to_string((int)socket);
+    std::string key = device->getMxId() + std::to_string((int)socket);
     if(managers.find(key) == managers.end() || managers[key] == 0) {
         managers[key] = ::std::shared_ptr<DepthaiCameraInfoManager>(new DepthaiCameraInfoManager(device, calibrationHandler, socket, nh, cname, url, width, height, topLeftPixelId, bottomRightPixelId));
     }
@@ -62,8 +62,8 @@ DepthaiCameraInfoManager::get(dai::Device &device, dai::CalibrationHandler& cali
 }
 
 static tf2_ros::Buffer& buffer(ros_impl::Node nh) {
-    std::unique_ptr<tf2_ros::Buffer> buffer_ptr;
-    std::unique_ptr<tf2_ros::TransformListener> listener;
+    static std::unique_ptr<tf2_ros::Buffer> buffer_ptr;
+    static std::unique_ptr<tf2_ros::TransformListener> listener;
 
     if(!buffer_ptr) {
 #if HAS_ROS2
@@ -77,7 +77,7 @@ static tf2_ros::Buffer& buffer(ros_impl::Node nh) {
     return *buffer_ptr;
 }
 
-DepthaiCameraInfoManager::DepthaiCameraInfoManager(dai::Device &device, dai::CalibrationHandler& calibrationHandler, dai::CameraBoardSocket socket,
+DepthaiCameraInfoManager::DepthaiCameraInfoManager(const std::shared_ptr<dai::Device> &device, dai::CalibrationHandler& calibrationHandler, dai::CameraBoardSocket socket,
                                                    ros_impl::Node nh, const std::string &cname, const std::string &url, int width, int height,
                                                    dai::Point2f topLeftPixelId,
                                                    dai::Point2f bottomRightPixelId)
@@ -103,9 +103,9 @@ static dai::CameraBoardSocket get_next_socket(dai::CameraBoardSocket socket) {
     }
 }
 
-static dai::CameraBoardSocket get_next_populated_socket(dai::Device &device, dai::CameraBoardSocket socket) {
+static dai::CameraBoardSocket get_next_populated_socket(const std::shared_ptr<dai::Device> &device, dai::CameraBoardSocket socket) {
     auto next_socket = get_next_socket(socket);
-    std::string key = device.getMxId() + std::to_string((int)next_socket);
+    std::string key = device->getMxId() + std::to_string((int)next_socket);
     if(managers[key]) {
         return next_socket;
     }
@@ -115,7 +115,7 @@ static dai::CameraBoardSocket get_next_populated_socket(dai::Device &device, dai
 }
 
 std::map<std::string, ros_impl::geometry_msgs::TransformStamped> device_transforms;
-static void transmit_eeprom(const ros_impl::Node& n, dai::Device &device, dai::CalibrationHandler& calibrationData) {
+static void transmit_eeprom(const ros_impl::Node& n, const std::shared_ptr<dai::Device> &device, dai::CalibrationHandler& calibrationData) {
     for(auto& kv : managers) {
         auto name = kv.first;
         auto& manager = kv.second;
@@ -143,7 +143,7 @@ static void transmit_eeprom(const ros_impl::Node& n, dai::Device &device, dai::C
     }
 }
 
-bool saveAllCalibrationData(const ros_impl::Node& n, dai::Device &device, dai::CalibrationHandler& calibrationHandler) {
+bool saveAllCalibrationData(const ros_impl::Node& n, const std::shared_ptr<dai::Device> &device, dai::CalibrationHandler& calibrationHandler) {
     auto now = std::chrono::high_resolution_clock::now();
     calibrationHandler.eepromToJsonFile("camera_info_backup_" + std::to_string(now.time_since_epoch().count()) + ".json");
 
@@ -152,7 +152,7 @@ bool saveAllCalibrationData(const ros_impl::Node& n, dai::Device &device, dai::C
         auto& manager = kv.second;
         if(manager == 0) continue;
 
-        if(manager->Device().getMxId() != device.getMxId())
+        if(manager->Device().getMxId() != device->getMxId())
             continue;
 
         auto socket = manager->Socket();
@@ -215,7 +215,7 @@ bool saveAllCalibrationData(const ros_impl::Node& n, dai::Device &device, dai::C
     calibrationHandler.eepromToJsonFile("camera_info_" + std::to_string(now.time_since_epoch().count()) + ".json");
     try{
         transmit_eeprom(n, device, calibrationHandler);
-        return device.flashCalibration(calibrationHandler);
+        return device->flashCalibration(calibrationHandler);
     } catch(std::runtime_error& e) {
         ROS_IMPL_WARN(n, "%s", e.what());
         return false;

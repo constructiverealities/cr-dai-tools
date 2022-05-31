@@ -11,7 +11,7 @@ protected:
     dai::CalibrationHandler& calibrationHandler;
 
     tf2_ros::TransformBroadcaster broadcaster;
-    dai::Device &device;
+    std::shared_ptr<dai::Device> device;
     enum dai::CameraBoardSocket socket;
 
     int width; int height;
@@ -24,20 +24,20 @@ protected:
     bool saveCalibrationFlash(const ros_impl::sensor_msgs::CameraInfo &new_info, const std::string &flashURL,
                               const std::string &cname) override;
 
-    DepthaiCameraInfoManager(dai::Device &device, dai::CalibrationHandler& calibrationHandler, enum dai::CameraBoardSocket socket, ros_impl::Node nh,
+    DepthaiCameraInfoManager(const std::shared_ptr<dai::Device> &device, dai::CalibrationHandler& calibrationHandler, enum dai::CameraBoardSocket socket, ros_impl::Node nh,
                              const std::string &cname="camera", const std::string &url="flash:///", int width = -1, int height = -1,
                              dai::Point2f topLeftPixelId = { },
                              dai::Point2f bottomRightPixelId = { });
 
 public:
-    dai::Device &Device() { return device; }
+    dai::Device &Device() { return *device; }
     enum dai::CameraBoardSocket Socket() { return socket; }
     std::string cname() const { return camera_name_; }
-    static std::shared_ptr<DepthaiCameraInfoManager> get(dai::Device &device, dai::CalibrationHandler& calibrationHandler, enum dai::CameraBoardSocket socket, ros_impl::Node nh,
+    static std::shared_ptr<DepthaiCameraInfoManager> get(const std::shared_ptr<dai::Device> &device, dai::CalibrationHandler& calibrationHandler, enum dai::CameraBoardSocket socket, ros_impl::Node nh,
             const std::string &cname="camera", const std::string &url="flash:///",int width = -1, int height = -1,
                                                          dai::Point2f topLeftPixelId = { },
                                                          dai::Point2f bottomRightPixelId = { });
-    static std::shared_ptr<DepthaiCameraInfoManager> get(dai::Device &device, enum dai::CameraBoardSocket socket);
+    static std::shared_ptr<DepthaiCameraInfoManager> get(const std::shared_ptr<dai::Device> &device, enum dai::CameraBoardSocket socket);
 
 
 };

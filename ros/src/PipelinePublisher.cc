@@ -47,7 +47,7 @@ namespace cr {
         PipelinePublisher::PipelinePublisher(::ros_impl::Node& pnh,
                                              std::shared_ptr<dai::Device> device,
                                              dai::Pipeline& pipeline)
-                : _device_node(pnh), _device(*device), metaInfo(device), mxId(device->getMxId()) {
+                : _device_node(pnh), _device(device), metaInfo(device), mxId(device->getMxId()) {
             _calibrationHandler = device->readCalibration();
             BuildPublisherFromPipeline(pipeline);
         }
@@ -56,7 +56,7 @@ namespace cr {
 #ifdef HAS_DYNAMIC_RECONFIGURE
             auto n = ros_impl::make_node(_device_node, "stereo");
             ROS_IMPL_INFO(_device_node, "Setting up stereo control server for %s", ros_impl::Namespace(n));
-            auto configQueue = _device.getInputQueue(prefix + "Config");
+            auto configQueue = _device->getInputQueue(prefix + "Config");
             auto server = std::make_shared<dynamic_reconfigure::Server<cr_dai_ros::StereoDepthConfig>>(*n);
             cr_dai_ros::StereoDepthConfig def_config = { };
             def_config.threshold_min = stereo->initialConfig.get().postProcessing.thresholdFilter.minRange;
@@ -93,13 +93,13 @@ namespace cr {
 
         void PipelinePublisher::BuildPublisherFromPipeline(dai::Pipeline& pipeline) {
             setupDeviceServer();
-            bool needsPipelineStart = !_device.isPipelineRunning();
+            bool needsPipelineStart = !_device->isPipelineRunning();
             if(needsPipelineStart) {
                 for(auto& node : pipeline.getAllNodes()) {
                     addConfigNodes(pipeline, node);
                 }
 
-                _device.startPipeline(pipeline);
+                _device->startPipeline(pipeline);
 
                 SetupPostStart walker(this);
                 walker.VisitAll(pipeline.getAllNodes());
@@ -121,7 +121,7 @@ namespace cr {
                 }
             }
 
-            auto qs = _device.getOutputQueueNames();
+            auto qs = _device->getOutputQueueNames();
             for(auto q : qs) {
                 mappedQueues.erase(q);
             }
@@ -156,7 +156,7 @@ namespace cr {
             auto socket = dai::CameraBoardSocket::CAM_A;
             auto name = prefix;
             ROS_IMPL_INFO(_device_node, "Setting up ToF control server for %s", name.c_str());
-            auto configQueue = _device.getInputQueue(name + "_inputControl");
+            auto configQueue = _device->getInputQueue(name + "_inputControl");
             auto n = getNodeHandle(socket);
             auto server = std::make_shared<dynamic_reconfigure::Server<cr_dai_ros::ToFControlConfig>>(*n);
 
@@ -189,7 +189,7 @@ namespace cr {
 #ifdef HAS_DYNAMIC_RECONFIGURE
             auto name = prefix + std::to_string((int)socket);
             ROS_IMPL_INFO(_device_node, "Setting up camera control server for %s", name.c_str());
-            auto configQueue = _device.getInputQueue(name + "_inputControl");
+            auto configQueue = _device->getInputQueue(name + "_inputControl");
             auto n = getNodeHandle(socket);
             auto server = std::make_shared<dynamic_reconfigure::Server<cr_dai_ros::CameraControlConfig>>(*n);
 
@@ -462,19 +462,19 @@ namespace cr {
             ROS_INFO("Setting up device server at %s",  _device_node->getNamespace().c_str());
             auto current_config = std::make_shared<cr_dai_ros::DeviceControlConfig>();
             server->getConfigDefault(*current_config);
-            current_config->LogLevel = static_cast<int>(_device.getLogOutputLevel());
+            current_config->LogLevel = static_cast<int>(_device->getLogOutputLevel());
 
             keep_alive.push_back(current_config);
 
             auto triggger_update = [=](cr_dai_ros::DeviceControlConfig& cfg, unsigned level) {
-                if(level & 1) _device.setIrFloodLightBrightness((float)cfg.IrFloodLightBrightness_right, 0x2);
-                if(level & 2) _device.setIrFloodLightBrightness((float)cfg.IrFloodLightBrightness_left, 0x1);
-                if(level & 4) _device.setIrLaserDotProjectorBrightness((float)cfg.IrLaserDotProjectorBrightness_right, 0x2);
-                if(level & 8) _device.setIrLaserDotProjectorBrightness((float)cfg.IrLaserDotProjectorBrightness_left, 0x1);
+                if(level & 1) _device->setIrFloodLightBrightness((float)cfg.IrFloodLightBrightness_right, 0x2);
+                if(level & 2) _device->setIrFloodLightBrightness((float)cfg.IrFloodLightBrightness_left, 0x1);
+                if(level & 4) _device->setIrLaserDotProjectorBrightness((float)cfg.IrLaserDotProjectorBrightness_right, 0x2);
+                if(level & 8) _device->setIrLaserDotProjectorBrightness((float)cfg.IrLaserDotProjectorBrightness_left, 0x1);
                 if(level & 16) {
                     ROS_IMPL_WARN(_device_node, "Setting log level to %d", cfg.LogLevel);
-                    //_device.setLogLevel(static_cast<dai::LogLevel>(cfg.LogLevel));
-                    //_device.setLogOutputLevel(static_cast<dai::LogLevel>(cfg.LogLevel));
+                    //_device->setLogLevel(static_cast<dai::LogLevel>(cfg.LogLevel));
+                    //_device->setLogOutputLevel(static_cast<dai::LogLevel>(cfg.LogLevel));
                 }
 
             };
@@ -515,7 +515,7 @@ namespace cr {
                 ROS_IMPL_WARN(this->_device_node, "Output queue %s mapped twice", xlinkOut->getStreamName().c_str());
             }
             mappedQueues.insert(xlinkOut->getStreamName());
-            return _device.getOutputQueue(xlinkOut->getStreamName(), qsize, blocking);
+            return _device->getOutputQueue(xlinkOut->getStreamName(), qsize, blocking);
         }
 
     }
