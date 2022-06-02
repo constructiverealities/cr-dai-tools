@@ -113,6 +113,10 @@ namespace cr {
             xinPicture->setFps(GetFPS(sensorMetaInfo));
 
             auto tof = pipeline->create<dai::node::ToF>();
+            if(auto tof_filter_config = std::getenv("CR_TOF_FILTER_CONFIG")) {
+                tof->setFilterConfig(tof_filter_config);
+            }
+            tof->initialConfig.get().useLoadedFilter = 1;
 
 
             using output_t = decltype(&tof->out);
@@ -187,6 +191,12 @@ namespace cr {
                 std::cerr << "Found stereo data " << (int)eeprom.stereoRectificationData.leftCameraSocket << " to " << (int) eeprom.stereoRectificationData.rightCameraSocket << std::endl;
                 bool hasRight = false, hasLeft = false;
                 for(auto& feature : features) {
+                    if(feature.socket == dai::CameraBoardSocket::RIGHT && feature.sensorName == "IMX378") {
+                        // Right and left share an i2c bus and IMX378's don't have an option to have different device IDs. So
+                        // we just assume they are in the left socket always for now.
+                        continue;
+                    }
+
                     hasRight |= feature.socket == dai::CameraBoardSocket::RIGHT;
                     hasLeft |= feature.socket == dai::CameraBoardSocket::LEFT;
                 }
