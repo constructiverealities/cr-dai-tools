@@ -14,7 +14,7 @@ if(NOT TARGET depthai::core)
 endif()
 
 SET(ROS_DEPENDENCIES sensor_msgs tf2 geometry_msgs std_msgs tf2_ros camera_info_manager )
-SET(ROS1_DEPENDENCIES ${ROS_DEPENDENCIES} catkin roscpp dynamic_reconfigure)
+SET(ROS1_DEPENDENCIES ${ROS_DEPENDENCIES} catkin roscpp dynamic_reconfigure message_runtime)
 SET(ROS2_DEPENDENCIES ${ROS_DEPENDENCIES})
 
 find_package(catkin)
@@ -57,6 +57,7 @@ elseif(catkin_FOUND)
     string(REPLACE "\\" "/" CATKIN_WORKSPACES "${CATKIN_WORKSPACES}")
 
     add_message_files (
+            DIRECTORY msg
             FILES
             CameraMetadata.msg
     )
@@ -65,7 +66,7 @@ elseif(catkin_FOUND)
             DEPENDENCIES
            std_msgs dynamic_reconfigure
     )
-    message(" ${cr_dai_ros_EXPORTED_TARGETS}")
+    message("cr_dai_ros_EXPORTED_TARGETS: ${cr_dai_ros_EXPORTED_TARGETS}")
     generate_dynamic_reconfigure_options(
             cfg/StereoDepth.cfg
             cfg/CameraControl.cfg
