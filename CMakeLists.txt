@@ -6,19 +6,12 @@ option(BUILD_DEPTHAI "Build all relevant dependencies" ${ROS_BUILD})
 include(FetchContent)
 if(BUILD_DEPTHAI)
     MESSAGE("Building depthai locally...")
-    # FetchContent_Declare(
-    #       opencv
-    #       GIT_REPOSITORY https://github.com/opencv/opencv.git
-    #       GIT_TAG        4.4.0
-    # 	)
-
     FetchContent_Declare(
             depthai-core
-            GIT_REPOSITORY https://github.com/luxonis/depthai-core.git
-            GIT_TAG tof_rgb_mono
+            GIT_REPOSITORY https://github.com/constructiverealities/depthai.git
+            GIT_TAG cr/develop
     )
 
-    #FetchContent_MakeAvailable(opencv)
     FetchContent_MakeAvailable(depthai-core)
     project(cr-dai-tools)
 else()
