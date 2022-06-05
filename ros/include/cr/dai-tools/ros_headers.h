@@ -154,6 +154,7 @@ namespace ros_impl {
     typedef std::shared_ptr<rclcpp::Node> Node;
     typedef std::shared_ptr<rclcpp::TimerBase> Timer;
     void spin(const Node& n);
+    bool spinOnce(const Node& n);
 
     Node make_node(const Node& p, const std::string& ns);
     Node make_node(const std::string& ns);

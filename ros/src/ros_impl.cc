@@ -6,6 +6,11 @@ namespace ros_impl {
         rclcpp::spin(n);
     }
 
+    bool spinOnce(const Node& n) {
+        rclcpp::spin_some(n);
+        return rclcpp::ok();
+    }
+
     Node make_node(const Node &p, const std::string &ns) {
         return p->create_sub_node(ns);
     }
