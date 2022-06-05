@@ -132,6 +132,7 @@ void cr::dai_rosnode::ImagePublisher::operator()(std::shared_ptr<dai::ImgFrame> 
         _cameraInfoPub->publish(_cameraInfoData);
 
 #ifdef HAS_IDL_SUPPORT
+#ifdef HAS_CAMERA_METADATA_SUPPORT
         cr_dai_ros::CameraMetadata msg;
         msg.header = header;
         msg.lens_position = inFrame->getLensPosition() < 0 ? -1 : (inFrame->getLensPosition() / 255.);
@@ -139,6 +140,7 @@ void cr::dai_rosnode::ImagePublisher::operator()(std::shared_ptr<dai::ImgFrame> 
         msg.category = inFrame->getCategory();
         msg.sensitivity = inFrame->getSensitivity();
         _cameraMetaPublisher->publish(msg);
+#endif
 #endif
         //ROS_WARN("Stop %s", Name().c_str());
 
@@ -154,7 +156,9 @@ void cr::dai_rosnode::ImagePublisher::operator()(std::shared_ptr<dai::ImgFrame> 
 
 void cr::dai_rosnode::ImagePublisher::Setup() {
 #ifdef HAS_IDL_SUPPORT
+#ifdef HAS_CAMERA_METADATA_SUPPORT
     _cameraMetaPublisher = ros_impl::create_publisher<cr_dai_ros::CameraMetadata>(_nh, Name() + "/camera_metadata", queueSize);
+#endif
 #endif
 
     publisher = ros_impl::create_publisher<ros_impl::sensor_msgs::Image>(_nh, Name() + "/image", queueSize);

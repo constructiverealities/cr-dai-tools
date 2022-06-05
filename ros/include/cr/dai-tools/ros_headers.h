@@ -30,8 +30,11 @@
 #include <sensor_msgs/SetCameraInfo.h>
 #include <sensor_msgs/Imu.h>
 
-
+#ifndef WIN32
+#define HAS_CAMERA_METADATA_SUPPORT
 #include "cr_dai_ros/CameraMetadata.h"
+#endif
+
 #include "cr_dai_ros/StereoDepthConfig.h"
 #include "cr_dai_ros/CameraControlConfig.h"
 #include "cr_dai_ros/DeviceControlConfig.h"

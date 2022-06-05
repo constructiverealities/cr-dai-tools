@@ -17,7 +17,9 @@ namespace cr {
     class ImagePublisher : public Publisher_<dai::ImgFrame, ros_impl::sensor_msgs::Image> {
         protected:
 #ifdef HAS_IDL_SUPPORT
+#ifdef HAS_CAMERA_METADATA_SUPPORT
             ros_impl::Publisher<cr_dai_ros::CameraMetadata> _cameraMetaPublisher;
+#endif
 #endif
             ros_impl::Publisher<ros_impl::sensor_msgs::CameraInfo> _cameraInfoPub;
             ros_impl::sensor_msgs::CameraInfo _cameraInfoData;
