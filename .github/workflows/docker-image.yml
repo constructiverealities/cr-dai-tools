@@ -69,32 +69,12 @@ jobs:
           
           cmake --build c:\build-${{matrix.ros-distro}} -t autonode --config RelWithDebInfo
           cmake --build c:\build-${{matrix.ros-distro}} -t install --config RelWithDebInfo
-          cmake --build c:\build-${{matrix.ros-distro}} -t autonode --config Debug
-          cmake --build c:\build-${{matrix.ros-distro}} -t install --config Debug
       - name: Create artifacts (Release)
         uses: actions/upload-artifact@v3
         with:
           name: build-${{matrix.ros-distro}}
           path: |
             c:\build-${{matrix.ros-distro}}\install
-
-      - name: Run cmake (Debug)
-        run: |
-          md c:\build-${{matrix.ros-distro}}-debug
-          cd c:\build-${{matrix.ros-distro}}-debug
-          ${{ env.ROS_PATH }}/setup.ps1
-          dir env:          
-          dir -s ${{ env.ROS_PATH }}/share
-          cmake -DCMAKE_BUILD_TYPE=Debug -DBUILD_DEPTHAI=ON -B c:\build-${{matrix.ros-distro}}-debug -S ${{ github.workspace }}
-          
-          cmake --build c:\build-${{matrix.ros-distro}}-debug -t autonode --config Debug
-          cmake --build c:\build-${{matrix.ros-distro}}-debug -t install --config Debug
-      - name: Create artifacts (Debug)
-        uses: actions/upload-artifact@v3
-        with:
-          name: build-${{matrix.ros-distro}}-debug
-          path: |
-            c:\build-${{matrix.ros-distro}}-debug\install
 
   build-and-push-image:
     runs-on: ubuntu-latest
