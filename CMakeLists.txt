@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
+set(CMAKE_MAP_IMPORTED_CONFIG_RELWITHDEBINFO "RelWithDebInfo;Release;")
+
 option(ROS_BUILD "Build in a ros workspace" OFF)
 option(BUILD_DEPTHAI "Build all relevant dependencies" ${ROS_BUILD})
 
