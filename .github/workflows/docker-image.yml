@@ -15,6 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         ros-distro: [ foxy, noetic ]
+        build_type: [Release, RelWithDebInfo, Debug]
     runs-on: windows-2019
     permissions:
       contents: read
@@ -34,13 +35,6 @@ jobs:
         uses: jwlawson/actions-setup-cmake@v1.12
         with:
           cmake-version: '3.16.x'
-#      - uses: ros-tooling/setup-ros@v0.3
-#        if: ${{ matrix.ros-distro  == 'foxy' }}
-#        with:
-#          required-ros-distributions: ${{ matrix.ros-distro }}
-#      - if: ${{ matrix.ros-distro  == 'foxy' }}
-#        run:
-#          echo "ROS_PATH=c:/dev/${{ matrix.ros-distro }}/ros2-windows" >> $env:GITHUB_ENV
       - name: Install noetic
         if: ${{ matrix.ros-distro  == 'noetic' }}
         run: |
@@ -65,14 +59,14 @@ jobs:
           ${{ env.ROS_PATH }}/setup.ps1
           dir env:          
           dir -s ${{ env.ROS_PATH }}/share
-          cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_DEPTHAI=ON -B c:\build-${{matrix.ros-distro}} -S ${{ github.workspace }}
+          cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_DEPTHAI=ON -B c:\build-${{matrix.ros-distro}} -S ${{ github.workspace }}
           
-          cmake --build c:\build-${{matrix.ros-distro}} -t autonode --config RelWithDebInfo
-          cmake --build c:\build-${{matrix.ros-distro}} -t install --config RelWithDebInfo
+          cmake --build c:\build-${{matrix.ros-distro}} -t autonode --config ${{ matrix.build_type }}
+          cmake --build c:\build-${{matrix.ros-distro}} -t install --config ${{ matrix.build_type }}
       - name: Create artifacts (Release)
         uses: actions/upload-artifact@v3
         with:
-          name: build-${{matrix.ros-distro}}
+          name: build-${{matrix.ros-distro}}-${{ matrix.build_type }}
           path: |
             c:\build-${{matrix.ros-distro}}\install
 

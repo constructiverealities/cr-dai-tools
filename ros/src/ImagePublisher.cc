@@ -108,9 +108,9 @@ void cr::dai_rosnode::ImagePublisher::operator()(std::shared_ptr<dai::ImgFrame> 
         auto steadyTime = std::chrono::steady_clock::now();
         auto diffTime = steadyTime - tstamp;
 #ifdef HAS_ROS2
-        long int nsec = rosNow.seconds() - diffTime.count();//rosNow.toNSec() - diffTime.count();
+        int64_t nsec = rosNow.seconds() - diffTime.count();//rosNow.toNSec() - diffTime.count();
 #else
-        long int nsec = rosNow.toNSec() - diffTime.count();
+        int64_t nsec = rosNow.toNSec() - diffTime.count();
 #endif
         auto rosStamp = ros_impl::Time(nsec / 1000000000, nsec % 1000000000);
         ros_impl::std_msgs::Header header;
