@@ -11,7 +11,7 @@ if(BUILD_DEPTHAI)
     FetchContent_Declare(
             depthai-core
             GIT_REPOSITORY https://github.com/constructiverealities/depthai.git
-            GIT_TAG 47c31e9596645f5ee15a4125dc21d0015c6503c6
+            GIT_TAG b91ecb1a325b8a1189e363237ebf4d4415750ae3
     )
 
     FetchContent_MakeAvailable(depthai-core)
@@ -37,4 +37,7 @@ if(NOT ROS_BUILD)
     target_link_libraries(cr-dai-example cr-dai-tools)
 
     install(TARGETS cr-dai-example DESTINATION bin)
+    if(WIN32)
+        install(FILES $<TARGET_PDB_FILE:cr-dai-example> DESTINATION bin OPTIONAL)
+    endif()
 endif()

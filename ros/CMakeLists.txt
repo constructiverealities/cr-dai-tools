@@ -116,6 +116,9 @@ if(BUILD_ROS)
             LIBRARY DESTINATION lib
             PUBLIC_HEADER DESTINATION include
             )
+    if(WIN32)
+        install(FILES $<TARGET_PDB_FILE:autonode> DESTINATION bin OPTIONAL)
+    endif()
 endif()
 
 if(ament_cmake_FOUND)

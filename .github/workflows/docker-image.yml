@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         ros-distro: [ foxy, noetic ]
-        build_type: [Release, RelWithDebInfo, Debug]
+        build_type: [Release, RelWithDebInfo]
     runs-on: windows-2019
     permissions:
       contents: read

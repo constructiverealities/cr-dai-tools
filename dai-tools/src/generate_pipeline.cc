@@ -118,7 +118,6 @@ namespace cr {
             }
             tof->initialConfig.get().useLoadedFilter = 1;
 
-
             using output_t = decltype(&tof->out);
             std::list<std::pair<std::string, output_t>> outs = {
                     {"depth",     &tof->out},
@@ -183,7 +182,9 @@ namespace cr {
             auto calibrationData = device->readCalibration();
             auto eeprom = calibrationData.getEepromData();
 
-            HandleIMU();
+            if(eeprom.imuExtrinsics.rotationMatrix.size() != 0 && eeprom.imuExtrinsics.toCameraSocket != dai::CameraBoardSocket::AUTO) {
+                HandleIMU();
+            }
 
             auto features = device->getConnectedCameraFeatures();
             if(eeprom.stereoRectificationData.leftCameraSocket != dai::CameraBoardSocket::AUTO &&
