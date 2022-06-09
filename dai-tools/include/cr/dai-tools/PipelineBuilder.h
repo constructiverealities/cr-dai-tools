@@ -33,6 +33,12 @@ namespace cr {
             void Load();
         public:
             std::string Name;
+            enum class OptionalBool {
+                DEFAULT = -1,
+                FALSE = 0,
+                TRUE = 1
+            };
+            OptionalBool UseStereo = OptionalBool::DEFAULT, UseIMU = OptionalBool::DEFAULT;
             std::map<dai::CameraBoardSocket, SensorMetaInfo> SensorInfo;
 
             explicit DeviceMetaInfo(const std::shared_ptr<dai::Device>& device);

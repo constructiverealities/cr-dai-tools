@@ -127,17 +127,6 @@ namespace cr {
                     {"error", &tof->err_out},
             };
 
-            if(auto tof_filter_fn = std::getenv("CR_TOF_FILTER_BLOB")) {
-                auto nn = pipeline->create<dai::node::NeuralNetwork>();
-                nn->setNumInferenceThreads(2);
-                nn->setNumPoolFrames(4);
-                nn->setBlobPath(tof_filter_fn);
-                nn->input.setBlocking(false);
-                xinPicture->raw.link(nn->input);
-
-                outs.emplace_back(std::make_pair("raw_filtered", &nn->out));
-            }
-
             xinPicture->raw.link(tof->inputImage);
 
             for (auto &kv : outs) {
@@ -182,7 +171,9 @@ namespace cr {
             auto calibrationData = device->readCalibration();
             auto eeprom = calibrationData.getEepromData();
 
-            if(eeprom.imuExtrinsics.rotationMatrix.size() != 0 && eeprom.imuExtrinsics.toCameraSocket != dai::CameraBoardSocket::AUTO) {
+            bool useImuDefault = eeprom.imuExtrinsics.rotationMatrix.size() != 0 && eeprom.imuExtrinsics.toCameraSocket != dai::CameraBoardSocket::AUTO;
+            bool useImu = metaInfo.UseIMU == DeviceMetaInfo::OptionalBool::DEFAULT ? useImuDefault : (metaInfo.UseIMU == DeviceMetaInfo::OptionalBool::TRUE);
+            if(useImu) {
                 HandleIMU();
             }
 
@@ -201,7 +192,9 @@ namespace cr {
                     hasRight |= feature.socket == dai::CameraBoardSocket::RIGHT;
                     hasLeft |= feature.socket == dai::CameraBoardSocket::LEFT;
                 }
-                if(hasRight && hasLeft) {
+
+                bool useStereo = hasRight && hasLeft && std::getenv("CR_TOF_FILTER_CONFIG") == 0;
+                if(useStereo && metaInfo.UseStereo != DeviceMetaInfo::OptionalBool::FALSE) {
                     HandleStereo();
                 } else {
                     std::cerr << "Could not find cameras at stereo positions" << std::endl;
@@ -306,8 +299,9 @@ namespace cr {
             out << YAML::BeginMap;
             out << YAML::Key << "Name" << YAML::Value << Name;
             out << YAML::Key << "Id" << YAML::Value << device->getMxId();
+            out << YAML::Key << "UseIMU" << YAML::Value << (int)UseIMU;
+            out << YAML::Key << "UseStereo" << YAML::Value << (int)UseStereo;
             out << YAML::Key << "SensorInfos" << YAML::Value;
-
             {
                 out << YAML::BeginSeq;
                 for (auto &infos: this->SensorInfo) {
@@ -339,6 +333,9 @@ namespace cr {
             auto yaml = YAML::Load(fs);
             Name = yaml["Name"].as<std::string>(Name);
             std::cerr << "Loading meta info for " << Name << " from " << fn << std::endl;
+
+            UseIMU = static_cast<OptionalBool>(yaml["UseIMU"].as<int>(-1));
+            UseStereo = static_cast<OptionalBool>(yaml["UseStereo"].as<int>(-1));
 
             for(auto sensorMetadataNode : yaml["SensorInfos"]) {
                 int socket = sensorMetadataNode["Socket"].as<char>(0) - 'A';
