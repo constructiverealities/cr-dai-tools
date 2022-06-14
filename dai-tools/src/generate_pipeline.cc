@@ -113,7 +113,7 @@ namespace cr {
             xinPicture->setFps(GetFPS(sensorMetaInfo));
 
             auto tof = pipeline->create<dai::node::ToF>();
-            if(auto tof_filter_config = std::getenv("CR_TOF_FILTER_CONFIG")) {
+            if(auto tof_filter_config = std::getenv((std::string("CR_TOF_FILTER_CONFIG_") + features.sensorName).c_str())) {
                 tof->setFilterConfig(tof_filter_config);
             }
             tof->initialConfig.get().useLoadedFilter = 1;
@@ -193,7 +193,7 @@ namespace cr {
                     hasLeft |= feature.socket == dai::CameraBoardSocket::LEFT;
                 }
 
-                bool useStereo = hasRight && hasLeft && std::getenv("CR_TOF_FILTER_CONFIG") == 0;
+                bool useStereo = hasRight && hasLeft && std::getenv("CR_TOF_FILTER_CONFIG_MTP006") == 0 && std::getenv("CR_TOF_FILTER_CONFIG_OZT0358") == 0;
                 if(useStereo && metaInfo.UseStereo != DeviceMetaInfo::OptionalBool::FALSE) {
                     HandleStereo();
                 } else {
