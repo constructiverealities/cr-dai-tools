@@ -208,13 +208,19 @@ bool saveAllCalibrationData(const ros_impl::Node& n, const std::shared_ptr<dai::
                 ROS_IMPL_WARN(n, "Could not find transform between %s and %s (%s)", nextFrame.c_str(), thisFrame.c_str(), error_msg.c_str());
                 return false;
             }
+        } else {
+            std::vector<float> translation = {0,0,0};
+            std::vector<std::vector<float>> rotationMatrix;
+            rotationMatrix.resize(3);
+            for(int i = 0;i < 3;i++) rotationMatrix[i].resize(3);
+            calibrationHandler.setCameraExtrinsics(socket, dai::CameraBoardSocket::AUTO, rotationMatrix, translation);
         }
 
     }
 
     calibrationHandler.eepromToJsonFile("camera_info_" + std::to_string(now.time_since_epoch().count()) + ".json");
     try{
-        transmit_eeprom(n, device, calibrationHandler);
+        //transmit_eeprom(n, device, calibrationHandler);
         return device->flashCalibration(calibrationHandler);
     } catch(std::runtime_error& e) {
         ROS_IMPL_WARN(n, "%s", e.what());

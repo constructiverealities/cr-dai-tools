@@ -74,7 +74,7 @@ namespace cr {
             std::string name = "mono";
             if(stereo_depth_node) {
                 mono->out.link(features.socket == dai::CameraBoardSocket::LEFT ? stereo_depth_node->left : stereo_depth_node->right);
-                mono->setResolution(dai::MonoCameraProperties::SensorResolution::THE_800_P);
+                mono->setResolution(dai::MonoCameraProperties::SensorResolution::THE_400_P);
                 name = features.socket == dai::CameraBoardSocket::LEFT ? "left" : "right";
             }
             auto xoutVideo = pipeline->create<dai::node::XLinkOut>();
@@ -181,7 +181,7 @@ namespace cr {
             if(eeprom.stereoRectificationData.leftCameraSocket != dai::CameraBoardSocket::AUTO &&
                eeprom.stereoRectificationData.rightCameraSocket != dai::CameraBoardSocket::AUTO) {
                 std::cerr << "Found stereo data " << (int)eeprom.stereoRectificationData.leftCameraSocket << " to " << (int) eeprom.stereoRectificationData.rightCameraSocket << std::endl;
-                bool hasRight = false, hasLeft = false;
+                bool hasRight = false, hasLeft = false, hasToF = false;
                 for(auto& feature : features) {
                     if(feature.socket == dai::CameraBoardSocket::RIGHT && feature.sensorName == "IMX378") {
                         // Right and left share an i2c bus and IMX378's don't have an option to have different device IDs. So
@@ -191,9 +191,14 @@ namespace cr {
 
                     hasRight |= feature.socket == dai::CameraBoardSocket::RIGHT;
                     hasLeft |= feature.socket == dai::CameraBoardSocket::LEFT;
+                    hasToF |= feature.supportedTypes[0] == dai::CameraSensorType::TOF;
                 }
 
-                bool useStereo = hasRight && hasLeft && std::getenv("CR_TOF_FILTER_CONFIG_MTP006") == 0 && std::getenv("CR_TOF_FILTER_CONFIG_OZT0358") == 0;
+
+                bool useStereo = hasRight && hasLeft;
+                if(hasToF) {
+                    useStereo &= std::getenv("CR_TOF_FILTER_CONFIG_MTP006") == 0 && std::getenv("CR_TOF_FILTER_CONFIG_OZT0358") == 0;
+                }
                 if(useStereo && metaInfo.UseStereo != DeviceMetaInfo::OptionalBool::FALSE) {
                     HandleStereo();
                 } else {
