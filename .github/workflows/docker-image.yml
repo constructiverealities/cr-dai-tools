@@ -115,6 +115,17 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+      - name: Build and push Docker image (stock DAI)
+        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
+        with:
+          context: .
+          push: true
+          build-args: |
+            DEPTHAI_REPO=depthai-core
+            DEPTHAI_TAG=multi_cam_support
+          tags: ${{ steps.meta.outputs.tags }}-multi_cam_support
+          labels: ${{ steps.meta.outputs.labels }}-multi_cam_support
+
       - name: Build and push Docker image (ROS2)
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
         with:

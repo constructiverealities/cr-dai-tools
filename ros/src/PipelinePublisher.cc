@@ -37,11 +37,12 @@ namespace cr {
                 self->setupCameraControlServer(stereo, "stereo");
                 return true;
             }
+#ifdef HAS_CR_FORK
             bool Visit(std::shared_ptr <dai::node::ToF> tof) override {
                 self->setupCameraControlServer(tof, "tof");
                 return true;
             }
-
+#endif
         };
 
         PipelinePublisher::PipelinePublisher(::ros_impl::Node& pnh,
@@ -130,7 +131,7 @@ namespace cr {
             }
         }
 
-
+#ifdef HAS_CR_FORK
         void PipelinePublisher::setupCameraControlQueue(std::shared_ptr<dai::node::ToF> tof, const std::string& prefix) {
 #ifdef HAS_DYNAMIC_RECONFIGURE
             auto configIn = tof->getParentPipeline().template create<dai::node::XLinkIn>();
@@ -138,16 +139,6 @@ namespace cr {
             ROS_IMPL_INFO(_device_node,"Setting up camera control xlinks for %s", name.c_str());
             configIn->setStreamName(name + "_inputControl");
             configIn->out.link(tof->inputConfig);
-#endif
-        }
-
-        template<typename T> void PipelinePublisher::setupCameraControlQueue(std::shared_ptr<T> cam, const std::string& prefix) {
-#ifdef HAS_DYNAMIC_RECONFIGURE
-            auto configIn = cam->getParentPipeline().template create<dai::node::XLinkIn>();
-            auto name = prefix + std::to_string((int)cam->getBoardSocket());
-            ROS_IMPL_INFO(_device_node,"Setting up camera control xlinks for %s", name.c_str());
-            configIn->setStreamName(name + "_inputControl");
-            configIn->out.link(cam->inputControl);
 #endif
         }
 
@@ -185,6 +176,19 @@ namespace cr {
             keep_alive.push_back(server);
 #endif
         }
+
+#endif
+
+        template<typename T> void PipelinePublisher::setupCameraControlQueue(std::shared_ptr<T> cam, const std::string& prefix) {
+#ifdef HAS_DYNAMIC_RECONFIGURE
+            auto configIn = cam->getParentPipeline().template create<dai::node::XLinkIn>();
+            auto name = prefix + std::to_string((int)cam->getBoardSocket());
+            ROS_IMPL_INFO(_device_node,"Setting up camera control xlinks for %s", name.c_str());
+            configIn->setStreamName(name + "_inputControl");
+            configIn->out.link(cam->inputControl);
+#endif
+        }
+
         void PipelinePublisher::setupCameraControlServer(dai::CameraBoardSocket socket, const std::string& prefix) {
 #ifdef HAS_DYNAMIC_RECONFIGURE
             auto name = prefix + std::to_string((int)socket);
@@ -253,9 +257,11 @@ namespace cr {
             else if(auto mono = std::dynamic_pointer_cast<dai::node::MonoCamera>(node)) {
                 setupCameraControlQueue(mono, "mono");
             }
+#ifdef HAS_CR_FORK
             else if(auto tof = std::dynamic_pointer_cast<dai::node::ToF>(node)) {
                 setupCameraControlQueue(tof, "tof");
             }
+#endif
         }
 
         bool PipelinePublisher::Visit(SetupPublishers, std::shared_ptr<dai::node::XLinkOut> xLinkOut,
@@ -284,6 +290,7 @@ namespace cr {
             return true;
         }
 
+#ifdef HAS_CR_FORK
         bool PipelinePublisher::Visit(SetupPublishers, std::shared_ptr<dai::node::XLinkOut> xLinkOut,
                    const std::string& inputName, std::shared_ptr<dai::node::Camera> inputNode) {
             auto queue = getOutputQueue(xLinkOut, 4, false);
@@ -321,7 +328,7 @@ namespace cr {
             }
             return true;
         }
-
+#endif
         bool PipelinePublisher::Visit(SetupPublishers, std::shared_ptr<dai::node::XLinkOut> xLinkOut,
                                       const std::string &inputName, std::shared_ptr<dai::node::MonoCamera> inputNode) {
             auto queue = getOutputQueue(xLinkOut, 4, false);

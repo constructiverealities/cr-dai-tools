@@ -6,19 +6,34 @@
 
 namespace cr {
     namespace dai_tools {
+#if HAS_CR_FORK
         typedef dai::CameraFeatures CameraFeatures;
+        typedef dai::CameraProperties::SensorResolution SensorResolution;
+        typedef SensorResolution ColorCameraResolution;
+        typedef SensorResolution MonoCameraResolution;
+#else
+        typedef dai::CameraProperties CameraFeatures;
+        typedef int32_t SensorResolution;
+        typedef dai::ColorCameraProperties::SensorResolution ColorCameraResolution;
+        typedef dai::MonoCameraProperties::SensorResolution MonoCameraResolution;
+#endif
+        typedef dai::CameraSensorType CameraSensorType;
 
         std::shared_ptr<dai::Pipeline> GeneratePipeline(std::shared_ptr<dai::Device> &device);
 
         struct SensorMetaInfo {
             std::string SensorName;
-            dai::CameraSensorType SensorType;
+            CameraSensorType SensorType;
             double FPS = 30;
-            dai::CameraProperties::SensorResolution Resolution = dai::CameraProperties::SensorResolution::THE_720_P;
+            SensorResolution Resolution = (SensorResolution)0;
             std::vector<std::string> Outputs;
 
             SensorMetaInfo() {}
-            SensorMetaInfo(const std::string& name, dai::CameraSensorType sensorType, double fps, dai::CameraProperties::SensorResolution resolution);
+#ifndef HAS_CR_FORK
+            SensorMetaInfo(const std::string& name, CameraSensorType sensorType, double fps, ColorCameraResolution resolution) : SensorMetaInfo(name, sensorType, fps, (SensorResolution)resolution){}
+            SensorMetaInfo(const std::string& name, CameraSensorType sensorType, double fps, MonoCameraResolution resolution) : SensorMetaInfo(name, sensorType, fps, (SensorResolution)resolution){}
+#endif
+            SensorMetaInfo(const std::string& name, CameraSensorType sensorType, double fps, SensorResolution resolution);
 
             dai::MonoCameraProperties::SensorResolution MonoResolution();
 

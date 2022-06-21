@@ -33,14 +33,14 @@ RUN git clone -v https://github.com/libusb/libusb.git /repos/libusb && \
 
 RUN echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="03e7", MODE="0666"' | tee /etc/udev/rules.d/80-movidius.rules
 
-ADD https://api.github.com/repos/constructiverealities/depthai/branches/cr/develop cache-check
-RUN git clone -b cr/develop https://github.com/constructiverealities/depthai.git --recursive /repos/depthai_core && \
+ARG DEPTHAI_REPO=constructiverealities/depthai
+ARG DEPTHAI_TAG=cr/develop
+
+ADD https://api.github.com/repos/$DEPTHAI_REPO/branches/cr/develop cache-check
+RUN git clone -b $DEPTHAI_TAG https://github.com/$DEPTHAI_REPO.git --recursive /repos/depthai_core && \
     mkdir -p /build/depthai-core/cr/develop && \
     cd /build/depthai-core/cr/develop && cmake -DDEPTHAI_BUILD_EXAMPLES=OFF -DDEPTHAI_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=On /repos/depthai_core && make -j4 install && \
     rm -rf /build /repos/depthai_core
-
-#ADD https://api.github.com/repos/constructiverealities/cr-dai-tools/branches/develop /.cr-dai-tools-version
-#RUN git clone https://github.com/constructiverealities/cr-dai-tools.git --recursive -b develop /ros_catkin_ws/src/cr-dai-tools
 
 ADD . /ros_catkin_ws/src/cr-dai-tools
 RUN cd /ros_catkin_ws && catkin_make -DCMAKE_BUILD_TYPE=Release -DROS_BUILD=ON -DBUILD_DEPTHAI=ON -DCMAKE_INSTALL_PREFIX=/opt/ros/noetic install && rm -rf /ros_catkin_ws/build

@@ -9,7 +9,10 @@ namespace cr {
                 return VisitNode<
                         dai::node::ColorCamera,
                         dai::node::AprilTag,
+#ifdef HAS_CR_FORK
                         dai::node::Camera,
+                        dai::node::ToF,
+#endif
                         dai::node::DetectionNetwork,
                         dai::node::EdgeDetector,
                         dai::node::FeatureTracker,
@@ -24,7 +27,6 @@ namespace cr {
                         dai::node::SpatialLocationCalculator,
                         dai::node::SPIIn,
                         dai::node::SPIOut,
-                        dai::node::ToF,
                         dai::node::VideoEncoder,
                         dai::node::XLinkIn,
                         dai::node::XLinkOut>(args..., node);
@@ -38,8 +40,11 @@ namespace cr {
 
             virtual bool Visit(Args... args, std::shared_ptr <dai::node::AprilTag>) { return false; }
 
+#ifdef HAS_CR_FORK
             virtual bool Visit(Args... args, std::shared_ptr <dai::node::Camera>) { return false; }
 
+            virtual bool Visit(Args... args, std::shared_ptr <dai::node::ToF>) { return false; }
+#endif
             virtual bool Visit(Args... args, std::shared_ptr <dai::node::ColorCamera>) { return false; }
 
             virtual bool Visit(Args... args, std::shared_ptr <dai::node::DetectionNetwork>) { return false; }
@@ -71,8 +76,6 @@ namespace cr {
             virtual bool Visit(Args... args, std::shared_ptr <dai::node::StereoDepth>) { return false; }
 
             virtual bool Visit(Args... args, std::shared_ptr <dai::node::SystemLogger>) { return false; }
-
-            virtual bool Visit(Args... args, std::shared_ptr <dai::node::ToF>) { return false; }
 
             virtual bool Visit(Args... args, std::shared_ptr <dai::node::VideoEncoder>) { return false; }
 

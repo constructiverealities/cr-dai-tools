@@ -30,11 +30,12 @@ namespace cr {
             std::vector<std::shared_ptr<void>> keep_alive;
             dai::CalibrationHandler _calibrationHandler;
 
+#ifdef HAS_CR_FORK
             void setupCameraControlQueue(std::shared_ptr<dai::node::ToF> tof, const std::string& prefix);
-            template<typename T> void setupCameraControlQueue(std::shared_ptr<T> cam, const std::string& prefix);
-
-            void setupCameraControlServer(dai::CameraBoardSocket socket, const std::string& prefix);
             void setupCameraControlServer(std::shared_ptr<dai::node::ToF> cam, const std::string& prefix);
+#endif
+            template<typename T> void setupCameraControlQueue(std::shared_ptr<T> cam, const std::string& prefix);
+            void setupCameraControlServer(dai::CameraBoardSocket socket, const std::string& prefix);
             template<typename T> void setupCameraControlServer(std::shared_ptr<T> cam, const std::string& prefix);
 
             void setupCameraControlServer(std::shared_ptr<dai::node::StereoDepth> cam, const std::string& prefix);
@@ -57,10 +58,12 @@ namespace cr {
                        const std::string& inputName, std::shared_ptr<dai::node::ColorCamera> ptr) override;
             bool Visit(SetupPublishers, std::shared_ptr<dai::node::XLinkOut> xLinkOut,
                        const std::string& inputName, std::shared_ptr<dai::node::MonoCamera> ptr) override;
+#ifdef HAS_CR_FORK
             bool Visit(SetupPublishers, std::shared_ptr<dai::node::XLinkOut> xLinkOut,
                        const std::string& inputName, std::shared_ptr<dai::node::ToF> ptr) override;
             bool Visit(SetupPublishers, std::shared_ptr<dai::node::XLinkOut> xLinkOut,
                        const std::string& inputName, std::shared_ptr<dai::node::Camera> ptr) override;
+#endif
             bool Visit(SetupPublishers, std::shared_ptr<dai::node::XLinkOut> xLinkOut,
                        const std::string& inputName, std::shared_ptr<dai::node::IMU> ptr) override;
 

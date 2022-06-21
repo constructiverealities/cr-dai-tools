@@ -21,7 +21,7 @@ namespace cr {
         void PipelineBuilder::HandleIMX378(const CameraFeatures &features) {
             auto sensorInfo = metaInfo.SensorInfo.find(features.socket);
             if(sensorInfo == metaInfo.SensorInfo.end()) {
-                metaInfo.SensorInfo[features.socket] = SensorMetaInfo("IMX378", dai::CameraSensorType::COLOR, 30, dai::CameraProperties::SensorResolution::THE_1080_P);
+                metaInfo.SensorInfo[features.socket] = SensorMetaInfo("IMX378", dai::CameraSensorType::COLOR, 30, ColorCameraResolution::THE_1080_P);
             }
             HandleColor(features);
         }
@@ -34,7 +34,7 @@ namespace cr {
                         << "Warning: OV9*82 camera can not reliably be differentiated between color and mono. Override `HandleOV9_82` with the correct logic for your board"
                         << std::endl;
 
-                metaInfo.SensorInfo[features.socket] = SensorMetaInfo("OV9*82", isColor ? dai::CameraSensorType::COLOR : dai::CameraSensorType::MONO, 30, dai::CameraProperties::SensorResolution::THE_800_P);
+                metaInfo.SensorInfo[features.socket] = SensorMetaInfo("OV9*82", isColor ? dai::CameraSensorType::COLOR : dai::CameraSensorType::MONO, 30, ColorCameraResolution::THE_800_P);
             } else {
                 isColor = sensorInfo->second.SensorType == dai::CameraSensorType::COLOR;
             }
@@ -83,6 +83,7 @@ namespace cr {
         }
 
         void PipelineBuilder::HandleRaw(const CameraFeatures& features) {
+#if HAS_CR_FORK
             auto xinPicture = pipeline->create<dai::node::Camera>();
             xinPicture->setBoardSocket(features.socket);
 
@@ -90,6 +91,7 @@ namespace cr {
             xoutVideo->setStreamName("raw");
             xinPicture->raw.link(xoutVideo->input);
             printf("Creating raw camera on socket %d\n", (int)features.socket);
+#endif
         }
 
         float GetFPS(const SensorMetaInfo& sensorMetaInfo) {
@@ -101,6 +103,7 @@ namespace cr {
         }
 
         void PipelineBuilder::HandleToF(const CameraFeatures &features) {
+#if HAS_CR_FORK
             SensorMetaInfo sensorMetaInfo;
             if(metaInfo.SensorInfo.find(features.socket) == metaInfo.SensorInfo.end()) {
                 sensorMetaInfo = metaInfo.SensorInfo[features.socket] =
@@ -134,6 +137,7 @@ namespace cr {
                 xoutVideo->setStreamName(kv.first + std::to_string((int)features.socket));
                 kv.second->link(xoutVideo->input);
             }
+#endif
         }
 
         void PipelineBuilder::HandleStereo() {
@@ -177,7 +181,11 @@ namespace cr {
                 HandleIMU();
             }
 
+#if HAS_CR_FORK
             auto features = device->getConnectedCameraFeatures();
+#else
+            auto features = device->getConnectedCameraProperties();
+#endif
             if(eeprom.stereoRectificationData.leftCameraSocket != dai::CameraBoardSocket::AUTO &&
                eeprom.stereoRectificationData.rightCameraSocket != dai::CameraBoardSocket::AUTO) {
                 std::cerr << "Found stereo data " << (int)eeprom.stereoRectificationData.leftCameraSocket << " to " << (int) eeprom.stereoRectificationData.rightCameraSocket << std::endl;
@@ -348,7 +356,7 @@ namespace cr {
                     auto newInfo = SensorMetaInfo(sensorMetadataNode["SensorName"].as<std::string>(""),
                                                   (dai::CameraSensorType) sensorMetadataNode["SensorType"].as<int>(0),
                                                   sensorMetadataNode["FPS"].as<double>(30),
-                                                  (dai::CameraProperties::SensorResolution) sensorMetadataNode["Resolution"].as<int>(
+                                                  (SensorResolution) sensorMetadataNode["Resolution"].as<int>(
                                                           2));
                     if (socket >= 0) {
                         SensorInfo[(dai::CameraBoardSocket) socket] = newInfo;
@@ -359,9 +367,10 @@ namespace cr {
             }
         }
 
-        SensorMetaInfo::SensorMetaInfo(const std::string& name, dai::CameraSensorType sensorType, double fps, dai::CameraProperties::SensorResolution resolution)
+        SensorMetaInfo::SensorMetaInfo(const std::string& name, dai::CameraSensorType sensorType, double fps, SensorResolution resolution)
                 : SensorName(name), SensorType(sensorType), FPS(fps), Resolution(resolution) {}
 
+#ifdef HAS_CR_FORK
         dai::MonoCameraProperties::SensorResolution SensorMetaInfo::MonoResolution() {
             switch(Resolution) {
                 case dai::CameraProperties::SensorResolution::THE_400_P:
@@ -407,5 +416,9 @@ namespace cr {
                     return dai::ColorCameraProperties::SensorResolution::THE_1080_P;
             }
         }
+#else
+        dai::MonoCameraProperties::SensorResolution SensorMetaInfo::MonoResolution() { return (dai::MonoCameraProperties::SensorResolution)Resolution; }
+        dai::ColorCameraProperties::SensorResolution SensorMetaInfo::ColorResolution() { return (dai::ColorCameraProperties::SensorResolution)Resolution; }
+#endif
     }
 }
