@@ -7,6 +7,15 @@ if(NOT TARGET depthai::core)
   find_package(depthai REQUIRED)
 endif()
 
+include(CheckStructHasMember)
+
+get_property(DEPTHAI_INCLUDES TARGET depthai::core PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
+get_property(DEPTHAI_LOCATION TARGET depthai::core PROPERTY LOCATION)
+
+set(CMAKE_REQUIRED_LIBRARIES ${DEPTHAI_LOCATION})
+set(CMAKE_REQUIRED_INCLUDES ${DEPTHAI_INCLUDES})
+CHECK_STRUCT_HAS_MEMBER("class dai::node::ToF" inputConfig "depthai/pipeline/node/ToF.hpp" HAVE_CR_FORK LANGUAGE CXX)
+
 if(NOT TARGET yaml-cpp)
   include(FetchContent)
   MESSAGE("Getting yaml")
@@ -28,6 +37,10 @@ add_library(cr-dai-tools STATIC src/cr-dai-tools.cc src/generate_pipeline.cc src
 target_link_libraries(cr-dai-tools depthai::core ${YAML_CPP_LIBRARIES})
  
 target_include_directories(cr-dai-tools PUBLIC include ${depthai_INCLUDE_DIRS})
+
+if(HAVE_CR_FORK)
+  target_compile_options(cr-dai-tools PUBLIC "-DHAS_CR_FORK")
+endif()
 
 install(TARGETS cr-dai-tools
         LIBRARY DESTINATION lib

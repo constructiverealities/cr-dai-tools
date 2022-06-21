@@ -13,6 +13,10 @@
 namespace cr {
     namespace dai_rosnode {
 
+#ifndef HAS_CR_FORK
+        static decltype(&dai::Device::getConnectedCameraProperties) compile_fail_if_fork;
+#endif
+
         static std::map<dai::CameraBoardSocket, std::string> default_frame_mapping() {
             std::map<dai::CameraBoardSocket, std::string> frameNames;
             for(int i = (int)dai::CameraBoardSocket::CAM_A; i < 8; i++) {

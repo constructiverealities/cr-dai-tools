@@ -23,19 +23,6 @@ else()
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
-include(CheckStructHasMember)
-
-get_property(DEPTHAI_INCLUDES TARGET depthai::core PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
-get_property(DEPTHAI_LOCATION TARGET depthai::core PROPERTY LOCATION)
-
-set(CMAKE_REQUIRED_LIBRARIES ${DEPTHAI_LOCATION})
-set(CMAKE_REQUIRED_INCLUDES ${DEPTHAI_INCLUDES})
-
-CHECK_STRUCT_HAS_MEMBER("class dai::node::ToF" inputConfig "depthai/pipeline/node/ToF.hpp" HAVE_CR_FORK LANGUAGE CXX)
-
-if(HAVE_CR_FORK)
-    add_compile_options("-DHAS_CR_FORK")
-endif()
 
 if(NOT ROS_BUILD)
     add_subdirectory(dai-tools)

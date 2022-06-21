@@ -130,6 +130,17 @@ namespace cr {
                     {"error", &tof->err_out},
             };
 
+            if(auto tof_filter_fn = std::getenv("CR_TOF_FILTER_BLOB")) {
+                auto nn = pipeline->create<dai::node::NeuralNetwork>();
+                nn->setNumInferenceThreads(2);
+                nn->setNumPoolFrames(4);
+                nn->setBlobPath(tof_filter_fn);
+                nn->input.setBlocking(false);
+                xinPicture->raw.link(nn->input);
+
+                outs.emplace_back(std::make_pair("raw_filtered", &nn->out));
+            }
+
             xinPicture->raw.link(tof->inputImage);
 
             for (auto &kv : outs) {
