@@ -28,9 +28,8 @@ jobs:
         uses: actions/cache@v3
         with:
           path: |
-            c:/.hunter
-            c:/opt/chocolatey
-          key: ${{ runner.os }}-${{matrix.ros-distro}}-${{ hashFiles('**/lockfiles') }}
+            c:/opt/
+          key: ${{ runner.os }}-${{matrix.ros-distro}}-${{ matrix.build_type }}
       - name: Setup cmake
         uses: jwlawson/actions-setup-cmake@v1.12
         with:
