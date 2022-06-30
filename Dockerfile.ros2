@@ -27,11 +27,13 @@ ADD . /ros_ws/src/cr-dai-tools
 
 SHELL ["/bin/bash", "-c"]
 ENV PYTHONUNBUFFERED 1
-#--paths=src/**/ros 
 RUN source /opt/ros/$ROS_DISTRO/setup.bash && cd /ros_ws && colcon --log-level info build --merge-install --install-base /opt/ros/$ROS_DISTRO --cmake-args -DROS_BUILD=ON
 
 ENV ROS_DISTRO=$ROS_DISTRO
 ADD entrypoint.sh /
+
+RUN groupadd --gid 1000 cr-user && useradd --uid 1000 --gid cr-user --shell /bin/bash --create-home cr-user
+USER 1000:1000
 
 ENV LD_LIBRARY_PATH=/opt/ros/foxy/lib/x86_64-linux-gnu/:/opt/ros/foxy/lib/
 ENTRYPOINT ["/entrypoint.sh"]

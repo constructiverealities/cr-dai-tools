@@ -46,6 +46,10 @@ ADD . /ros_catkin_ws/src/cr-dai-tools
 RUN cd /ros_catkin_ws && catkin_make -DCMAKE_BUILD_TYPE=Release -DROS_BUILD=ON -DBUILD_DEPTHAI=ON -DCMAKE_INSTALL_PREFIX=/opt/ros/noetic install && rm -rf /ros_catkin_ws/build
 
 ADD entrypoint.sh /
+
+RUN groupadd --gid 1000 cr-user && useradd --uid 1000 --gid cr-user --shell /bin/bash --create-home cr-user
+USER 1000:1000
+
 ENV ROS_DISTRO noetic
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/opt/ros/noetic/bin/autonode"]
