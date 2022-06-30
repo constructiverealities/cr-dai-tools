@@ -210,7 +210,7 @@ namespace cr {
 
                     hasRight |= feature.socket == dai::CameraBoardSocket::RIGHT;
                     hasLeft |= feature.socket == dai::CameraBoardSocket::LEFT;
-                    hasToF |= feature.supportedTypes[0] == dai::CameraSensorType::TOF;
+                    hasToF |= !feature.supportedTypes.empty() && feature.supportedTypes[0] == dai::CameraSensorType::TOF;
                 }
 
 
