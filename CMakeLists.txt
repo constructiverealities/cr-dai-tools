@@ -16,7 +16,6 @@ if(BUILD_DEPTHAI)
 
     FetchContent_MakeAvailable(depthai-core)
     project(cr-dai-tools)
-    find_package(depthai REQUIRED)
 else()
     project(cr-dai-tools)
     find_package(depthai REQUIRED)

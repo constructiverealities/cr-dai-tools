@@ -5,13 +5,13 @@ include_directories(${depthai_INCLUDE_DIRS} dai-tools/include)
 
 if(NOT TARGET depthai::core)
   find_package(depthai REQUIRED)
+  get_property(LIBNOP_INCLUDES TARGET libnop PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
 endif()
 
 include(CheckStructHasMember)
 
 cmake_policy(SET CMP0026 OLD)
 get_property(DEPTHAI_INCLUDES TARGET depthai::core PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
-get_property(LIBNOP_INCLUDES TARGET libnop PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
 
 set(CMAKE_REQUIRED_INCLUDES ${DEPTHAI_INCLUDES} ${LIBNOP_INCLUDES})
 CHECK_STRUCT_HAS_MEMBER("class dai::node::ToF" inputConfig "depthai/pipeline/node/ToF.hpp" HAVE_CR_FORK LANGUAGE CXX)
