@@ -8,6 +8,7 @@
       <file path="$PROJECT_DIR$/cmake-build-debug-docker-ros1" />
       <file path="$PROJECT_DIR$/cmake-build-debug-docker-ros2" />
       <file path="$PROJECT_DIR$/cmake-build-release" />
+      <file path="$PROJECT_DIR$/cmake-build-relwithdebinfo" />
     </excludeRoots>
   </component>
 </project>
