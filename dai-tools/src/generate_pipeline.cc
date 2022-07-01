@@ -164,8 +164,11 @@ namespace cr {
             stereo_depth_node->setSubpixel(true);
             stereo_depth_node->setRuntimeModeSwitch(true);
 
-            stereo_depth_node->setDepthAlign(metaInfo.StereoAlignment);
-
+            if(metaInfo.StereoAlignment == dai::CameraBoardSocket::RIGHT) {
+                stereo_depth_node->setDepthAlign(dai::RawStereoDepthConfig::AlgorithmControl::DepthAlign::RECTIFIED_RIGHT);
+            } else {
+                stereo_depth_node->setDepthAlign(dai::RawStereoDepthConfig::AlgorithmControl::DepthAlign::RECTIFIED_LEFT);
+            }
 
             using output_t = decltype(&stereo_depth_node->depth);
             std::list<std::pair<std::string, output_t>> outs = {

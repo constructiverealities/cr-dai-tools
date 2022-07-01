@@ -409,7 +409,11 @@ namespace cr {
             auto queue = getOutputQueue(xLinkOut, 4, false);
             auto alignSocket = stereo->properties.depthAlignCamera;
             if(alignSocket == dai::CameraBoardSocket::AUTO) {
-                alignSocket = dai::CameraBoardSocket::RIGHT;
+                if(stereo->initialConfig.get().algorithmControl.depthAlign == dai::RawStereoDepthConfig::AlgorithmControl::DepthAlign::RECTIFIED_RIGHT) {
+                    alignSocket = dai::CameraBoardSocket::RIGHT;
+                } else {
+                    alignSocket = dai::CameraBoardSocket::LEFT;
+                }
             }
             int height = -1, width =-1;
 
@@ -469,8 +473,6 @@ namespace cr {
                 std::string side_name = isLeft ? "left" : "right";
                 auto socket = side_name == "left" ? dai::CameraBoardSocket::LEFT : dai::CameraBoardSocket::RIGHT;
                 bool isRect = (inputName == "rectifiedLeft" || inputName == "rectifiedRight");
-                auto socketName = default_frame_mapping()[socket];
-                std::string pub_name = socketName + "/" + side_name + (isRect ? "/image_rect" : "/image_raw");
 
                 auto pipeline = stereo->getParentPipeline();
                 auto connections = pipeline.getConnectionMap();
@@ -496,7 +498,7 @@ namespace cr {
                 }
                 make_publisher<ImagePublisher>(
                         queue,
-                        _device_node,
+                        getNodeHandle(socket),
                         30,
                         cameraInfo,
                         xLinkOut);
