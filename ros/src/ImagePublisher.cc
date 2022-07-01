@@ -115,7 +115,9 @@ void cr::dai_rosnode::ImagePublisher::operator()(std::shared_ptr<dai::ImgFrame> 
         auto rosStamp = ros_impl::Time(nsec / 1000000000, nsec % 1000000000);
         ros_impl::std_msgs::Header header;
         header.frame_id = _cameraInfoData.header.frame_id;
-        //header.seq = inFrame->getSequenceNum();
+#ifndef HAS_ROS2
+        header.seq = inFrame->getSequenceNum();
+#endif
         header.stamp = rosStamp;
         std::string encoding;
 

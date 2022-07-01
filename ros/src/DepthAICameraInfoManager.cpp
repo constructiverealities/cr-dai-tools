@@ -20,7 +20,7 @@ static void copy(D_T &d, const std::vector<std::vector<float>> &s) {
     }
 }
 
-static void copy(std::vector<std::vector<float>> &d, const boost::array<double, 9>& s) {
+static void copy(std::vector<std::vector<float>> &d, const double* s) {
     d.resize(3);
     for(int i = 0;i < 3;i++) {
         d[i].resize(3);
@@ -183,7 +183,7 @@ bool saveAllCalibrationData(const ros_impl::Node& n, const std::shared_ptr<dai::
         calibrationHandler.setCameraIntrinsics(socket, intrinsics, new_info.width, new_info.height);
 
         std::vector<std::vector<float>> R;
-        copy(R, new_info.R);
+        copy(R, new_info.R.data());
         if(calibrationHandler.getStereoRightCameraId() == socket) {
             calibrationHandler.setStereoRight(socket, R);
         } else if(calibrationHandler.getStereoLeftCameraId() == socket) {

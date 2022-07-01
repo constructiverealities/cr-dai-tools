@@ -52,7 +52,9 @@ void cr::dai_rosnode::DepthPublisher::operator()(std::shared_ptr<dai::ImgFrame> 
 
     if(ros_impl::get_subscription_count(_nh, pointcloudPublisher) > 0){
         auto pc = pc_template;
+#ifndef HAS_ROS2
         _cameraInfoData.header.seq++;
+#endif
         pc.header = _cameraInfoData.header;
         pc.header.stamp = ros_impl::now(_nh);
         pc.data.resize(pc.point_step * pc.height * pc.width);

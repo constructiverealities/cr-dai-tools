@@ -7,6 +7,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME_STOCK: ${{ github.repository }}-ROS1-STOCK
   IMAGE_NAME_ROS2: ${{ github.repository }}-ROS2
 
 jobs:
@@ -29,7 +30,10 @@ jobs:
         with:
           path: |
             c:/opt/
-          key: ${{ runner.os }}-${{matrix.ros-distro}}-${{ matrix.build_type }}
+          key: ${{ runner.os }}-${{matrix.ros-distro}}-${{ matrix.build_type }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-${{matrix.ros-distro}}-${{ matrix.build_type }}
+
       - name: Setup cmake
         uses: jwlawson/actions-setup-cmake@v1.12
         with:
@@ -37,16 +41,20 @@ jobs:
       - name: Install noetic
         if: ${{ matrix.ros-distro  == 'noetic' }}
         run: |
-          mkdir c:\opt\chocolatey
+          New-Item -ItemType Directory -Force -Path c:\opt\chocolatey
           set ChocolateyInstall=c:\opt\chocolatey
+          dir c:\opt
+          choco config set cacheLocation c:\opt\chocolatey\cache
           choco source add -n=ros-win -s="https://aka.ms/ros/public" --priority=1
           choco upgrade ros-noetic-desktop_full -y --execution-timeout=0      --no-progress
           echo "ROS_PATH=c:\opt\ros\noetic\x64" >> $env:GITHUB_ENV
       - name: Install foxy
         if: ${{ matrix.ros-distro  != 'noetic' }}
         run: |
-          mkdir c:\opt\chocolatey
+          New-Item -ItemType Directory -Force -Path c:\opt\chocolatey
           set ChocolateyInstall=c:\opt\chocolatey
+          dir c:\opt          
+          choco config set cacheLocation c:\opt\chocolatey\cache
           choco source add -n=ros-win -s="https://aka.ms/ros/public" --priority=1
           choco upgrade ros-foxy-desktop -y --execution-timeout=0      --no-progress
           echo "ROS_PATH=c:\opt\ros\foxy\x64" >> $env:GITHUB_ENV
@@ -56,8 +64,6 @@ jobs:
           md c:\build-${{matrix.ros-distro}}
           cd c:\build-${{matrix.ros-distro}}
           ${{ env.ROS_PATH }}/setup.ps1
-          dir env:          
-          dir -s ${{ env.ROS_PATH }}/share
           cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_DEPTHAI=ON -B c:\build-${{matrix.ros-distro}} -S ${{ github.workspace }}
           
           cmake --build c:\build-${{matrix.ros-distro}} -t autonode --config ${{ matrix.build_type }}
@@ -100,6 +106,12 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
+      - name: Extract metadata (tags, labels) for Docker Stock
+        id: meta_stock
+        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_STOCK }}
+
       - name: Extract metadata (tags, labels) for Docker (ROS2)
         id: meta_ros2
         uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
@@ -114,8 +126,8 @@ jobs:
           build-args: |
             DEPTHAI_REPO=luxonis/depthai-core
             DEPTHAI_TAG=multi_cam_support
-          tags: ${{ steps.meta.outputs.tags }}-multi_cam_support
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta_stock.outputs.tags }}
+          labels: ${{ steps.meta_stock.outputs.labels }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
