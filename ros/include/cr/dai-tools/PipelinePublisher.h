@@ -2,6 +2,7 @@
 
 #include "depthai/device/Device.hpp"
 #include "depthai/pipeline/nodes.hpp"
+#include "depthai/pipeline/nodes.hpp"
 #include "cr/dai-tools/NodeWalker.h"
 #include "cr/dai-tools/PipelineBuilder.h"
 #include "DepthAICameraInfoManager.hpp"

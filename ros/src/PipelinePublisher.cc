@@ -381,6 +381,27 @@ namespace cr {
             return true;
         }
 
+
+        template <typename S = dai::Node>
+        static inline std::shared_ptr<S> FindOppositeNode(dai::Node::Input& input) {
+            auto& name = input.name;
+            auto& node = input.getParent();
+
+            auto pipeline = node.getParentPipeline();
+            auto connections = pipeline.getConnectionMap();
+            for(auto& connection : connections) {
+                auto toNode = pipeline.getNode(connection.first);
+                if(toNode->id != node.id) continue;
+
+                for(auto& nodeConnection : connection.second) {
+                    if(nodeConnection.inputName != name) continue;
+                    return std::dynamic_pointer_cast<S>(pipeline.getNode(nodeConnection.outputId));
+                }
+            }
+
+            return 0;
+        }
+
         bool PipelinePublisher::Visit(SetupPublishers, std::shared_ptr<dai::node::XLinkOut> xLinkOut,
                                       const std::string &inputName,
                                       std::shared_ptr<dai::node::StereoDepth> stereo) {
@@ -388,10 +409,30 @@ namespace cr {
             auto queue = getOutputQueue(xLinkOut, 4, false);
             auto alignSocket = stereo->properties.depthAlignCamera;
             if(alignSocket == dai::CameraBoardSocket::AUTO) {
-                alignSocket = dai::CameraBoardSocket::LEFT;
+                alignSocket = dai::CameraBoardSocket::RIGHT;
             }
+            int height = -1, width =-1;
 
-            auto depthCameraInfo = CameraInfo(alignSocket, 1280, 800);
+            height = stereo->properties.outHeight.value_or(height);
+            width = stereo->properties.outWidth.value_or(width);
+            if(width == -1 || height == -1) {
+                auto otherNode = FindOppositeNode(stereo->right);
+                if(auto monoNode = std::dynamic_pointer_cast<dai::node::MonoCamera>(otherNode)) {
+                    width = monoNode->getResolutionWidth();
+                    height = monoNode->getResolutionHeight();
+                }
+                else if(auto rgbNode = std::dynamic_pointer_cast<dai::node::ColorCamera>(otherNode)) {
+                    width = rgbNode->getResolutionWidth();
+                    height = rgbNode->getResolutionHeight();
+                } else {
+                    ROS_IMPL_WARN(_device_node, "Could not figure out how stereo is connected to right/left, not publishing stereo topics.");
+                    return true;
+                }
+            }
+            auto depthCameraInfo = CameraInfo(alignSocket, width, height);
+            for(auto& d : depthCameraInfo.D)
+                d = 0;
+
             if(inputName == "depth") {
                 //converter = std::make_shared<ImageConverter>(_frame_prefix + frame, true);
                 make_publisher<DepthPublisher>(
@@ -428,9 +469,9 @@ namespace cr {
                 std::string side_name = isLeft ? "left" : "right";
                 auto socket = side_name == "left" ? dai::CameraBoardSocket::LEFT : dai::CameraBoardSocket::RIGHT;
                 bool isRect = (inputName == "rectifiedLeft" || inputName == "rectifiedRight");
-                std::string pub_name = side_name + (isRect ? "/image_rect" : "/image_raw");
+                auto socketName = default_frame_mapping()[socket];
+                std::string pub_name = socketName + "/" + side_name + (isRect ? "/image_rect" : "/image_raw");
 
-                int monoWidth = 0, monoHeight = 0;
                 auto pipeline = stereo->getParentPipeline();
                 auto connections = pipeline.getConnectionMap();
                 auto stereoConnections = connections[stereo->id];

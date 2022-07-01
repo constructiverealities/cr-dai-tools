@@ -75,7 +75,9 @@ namespace cr {
             if(stereo_depth_node) {
                 mono->out.link(features.socket == dai::CameraBoardSocket::LEFT ? stereo_depth_node->left : stereo_depth_node->right);
                 mono->setResolution(dai::MonoCameraProperties::SensorResolution::THE_400_P);
-                name = features.socket == dai::CameraBoardSocket::LEFT ? "left" : "right";
+
+                // Stereo has a synced output for left/right, so we don't need one here.
+                return;
             }
             auto xoutVideo = pipeline->create<dai::node::XLinkOut>();
             xoutVideo->setStreamName(name + std::to_string((int) features.socket));
@@ -162,6 +164,9 @@ namespace cr {
             stereo_depth_node->setSubpixel(true);
             stereo_depth_node->setRuntimeModeSwitch(true);
 
+            stereo_depth_node->setDepthAlign(metaInfo.StereoAlignment);
+
+
             using output_t = decltype(&stereo_depth_node->depth);
             std::list<std::pair<std::string, output_t>> outs = {
                     {"stereo_depth",     &stereo_depth_node->depth},
@@ -218,7 +223,7 @@ namespace cr {
                 if(hasToF) {
                     useStereo &= std::getenv("CR_TOF_FILTER_CONFIG_MTP006") == 0 && std::getenv("CR_TOF_FILTER_CONFIG_OZT0358") == 0;
                 }
-                if(useStereo && metaInfo.UseStereo != DeviceMetaInfo::OptionalBool::FALSE) {
+                if(useStereo && metaInfo.StereoAlignment != dai::CameraBoardSocket::AUTO) {
                     HandleStereo();
                 } else {
                     std::cerr << "Could not find cameras at stereo positions" << std::endl;
@@ -318,22 +323,58 @@ namespace cr {
             return saveDir + fn;
         }
 
+        static std::string Socket2Str(dai::CameraBoardSocket s) {
+            if(s == dai::CameraBoardSocket::AUTO) {
+                return "NONE";
+            }
+            std::string rtn = "";
+            rtn += ('A' + (int) s);
+            return rtn;
+        }
+        static dai::CameraBoardSocket Str2Socket(const std::string& s) {
+            if(s == "NONE" || s == "AUTO") {
+                return dai::CameraBoardSocket::AUTO;
+            }
+            if(s.size() == 1 && s[0] >= 'A' && s[0] <= 'H') {
+                return static_cast<dai::CameraBoardSocket>(s[0] - 'A');
+            }
+            fprintf(stderr, "Warning: %s not understood as a camera board socket.", s.c_str());
+            return dai::CameraBoardSocket::AUTO;
+        }
+        static std::vector<std::string> CameraSensorTypeNames = {"COLOR", "MONO", "TOF", "THERMAL"};
+        static std::string SensorType2Str(dai::CameraSensorType t) {
+            if((int)t > CameraSensorTypeNames.size() || (int)t < 0) {
+                return "UNKNOWN";
+            }
+            return CameraSensorTypeNames[(int)t];
+        }
+        dai::CameraSensorType Str2SensorType(const std::string& v) {
+            for(int i = 0;i < CameraSensorTypeNames.size();i++) {
+                if(v == CameraSensorTypeNames[i])
+                    return static_cast<CameraSensorType>(i);
+            }
+            if(v.size() == 1 && v[0] >= '0' && v[0] <= '9') {
+                return static_cast<CameraSensorType>(v[0] - '0');
+            }
+            fprintf(stderr, "Warning: %s not understood as a camera type.", v.c_str());
+            return dai::CameraSensorType::MONO;
+        }
         void DeviceMetaInfo::Save() {
             YAML::Emitter out;
             out << YAML::BeginMap;
             out << YAML::Key << "Name" << YAML::Value << Name;
             out << YAML::Key << "Id" << YAML::Value << device->getMxId();
             out << YAML::Key << "UseIMU" << YAML::Value << (int)UseIMU;
-            out << YAML::Key << "UseStereo" << YAML::Value << (int)UseStereo;
+            out << YAML::Key << "StereoAlignment" << YAML::Value << Socket2Str(StereoAlignment);
             out << YAML::Key << "SensorInfos" << YAML::Value;
             {
                 out << YAML::BeginSeq;
                 for (auto &infos: this->SensorInfo) {
                     out << YAML::BeginMap;
-                    out << YAML::Key << "Socket" << YAML::Value << (char) ('A' + (int) infos.first);
+                    out << YAML::Key << "Socket" << YAML::Value << Socket2Str(infos.first);
                     out << YAML::Key << "SensorName" << YAML::Value << infos.second.SensorName;
                     out << YAML::Key << "FPS" << YAML::Value << infos.second.FPS;
-                    out << YAML::Key << "SensorType" << YAML::Value << (int)infos.second.SensorType;
+                    out << YAML::Key << "SensorType" << YAML::Value << SensorType2Str(infos.second.SensorType);
                     out << YAML::Key << "Resolution" << YAML::Value << (int) infos.second.Resolution;
                     out << YAML::Key << "Outputs" << YAML::Value << YAML::BeginSeq;
                     for (auto &o: infos.second.Outputs) {
@@ -359,17 +400,17 @@ namespace cr {
             std::cerr << "Loading meta info for " << Name << " from " << fn << std::endl;
 
             UseIMU = static_cast<OptionalBool>(yaml["UseIMU"].as<int>(-1));
-            UseStereo = static_cast<OptionalBool>(yaml["UseStereo"].as<int>(-1));
+            StereoAlignment = Str2Socket(yaml["StereoAlignment"].as<std::string>("C"));
 
             for(auto sensorMetadataNode : yaml["SensorInfos"]) {
-                int socket = sensorMetadataNode["Socket"].as<char>(0) - 'A';
+                auto socket = Str2Socket(sensorMetadataNode["Socket"].as<std::string>("NONE"));
                 try {
                     auto newInfo = SensorMetaInfo(sensorMetadataNode["SensorName"].as<std::string>(""),
-                                                  (dai::CameraSensorType) sensorMetadataNode["SensorType"].as<int>(0),
+                                                  Str2SensorType(sensorMetadataNode["SensorType"].as<std::string>("MONO")),
                                                   sensorMetadataNode["FPS"].as<double>(30),
                                                   (SensorResolution) sensorMetadataNode["Resolution"].as<int>(
                                                           2));
-                    if (socket >= 0) {
+                    if (socket != dai::CameraBoardSocket::AUTO) {
                         SensorInfo[(dai::CameraBoardSocket) socket] = newInfo;
                     }
                 } catch(std::exception& e) {

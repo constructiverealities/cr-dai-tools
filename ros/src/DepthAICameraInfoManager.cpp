@@ -20,6 +20,15 @@ static void copy(D_T &d, const std::vector<std::vector<float>> &s) {
     }
 }
 
+static void copy(std::vector<std::vector<float>> &d, const boost::array<double, 9>& s) {
+    d.resize(3);
+    for(int i = 0;i < 3;i++) {
+        d[i].resize(3);
+        for(int j = 0;j < 3;j++) {
+            d[i][j] = s[j+i*3];
+        }
+    }
+}
 static void copy(std::vector<std::vector<float>> &d, const tf2::Matrix3x3& s) {
     d.resize(3);
     for(int i = 0;i < 3;i++) {
@@ -172,6 +181,15 @@ bool saveAllCalibrationData(const ros_impl::Node& n, const std::shared_ptr<dai::
             }
         }
         calibrationHandler.setCameraIntrinsics(socket, intrinsics, new_info.width, new_info.height);
+
+        std::vector<std::vector<float>> R;
+        copy(R, new_info.R);
+        if(calibrationHandler.getStereoRightCameraId() == socket) {
+            calibrationHandler.setStereoRight(socket, R);
+        } else if(calibrationHandler.getStereoLeftCameraId() == socket) {
+            calibrationHandler.setStereoLeft(socket, R);
+        }
+
         std::vector<float> D;
         for (auto &d : new_info.D) D.push_back(d);
         D.resize(14);
@@ -266,8 +284,12 @@ bool DepthaiCameraInfoManager::loadCalibrationFlash(const std::string &flashURL,
 
     ros_impl::sensor_msgs::CameraInfo cameraInfo = {};
     cameraInfo.distortion_model = "rational_polynomial";
-    cameraInfo.width = camera_data.width;
-    cameraInfo.height = camera_data.height;
+
+    if(width == -1) width = camera_data.width;
+    if(height == -1) height = camera_data.height;
+
+    cameraInfo.width = width;
+    cameraInfo.height = height;
 
     cameraInfo.R[0] = cameraInfo.R[4] = cameraInfo.R[8] = 1;
     cameraInfo.header.frame_id = cname;
@@ -276,13 +298,13 @@ bool DepthaiCameraInfoManager::loadCalibrationFlash(const std::string &flashURL,
     try {
         auto intrinsics = calibrationHandler.getCameraIntrinsics(socket, width, height);
 
-        copy(cameraInfo.K, camera_data.intrinsicMatrix);
+        copy(cameraInfo.K, intrinsics);
         ROS_IMPL_INFO(nh_, "Loading calibration for %s Fx %f Fy %f Cx %f Cy %f", cname.c_str(), cameraInfo.K[0],
                       cameraInfo.K[4],
                       cameraInfo.K[2], cameraInfo.K[5]);
         copy(cameraInfo.D, camera_data.distortionCoeff);
         cameraInfo.D.resize(8);
-        copy43(cameraInfo.P, camera_data.intrinsicMatrix);
+        copy43(cameraInfo.P, intrinsics);
         assert(cname != "");
 
         if(socket == calibrationHandler.getStereoLeftCameraId()) {

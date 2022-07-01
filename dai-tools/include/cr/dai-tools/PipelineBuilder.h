@@ -53,7 +53,8 @@ namespace cr {
                 FALSE = 0,
                 TRUE = 1
             };
-            OptionalBool UseStereo = OptionalBool::DEFAULT, UseIMU = OptionalBool::DEFAULT;
+            dai::CameraBoardSocket StereoAlignment = dai::CameraBoardSocket::RIGHT;
+            OptionalBool UseIMU = OptionalBool::DEFAULT;
             std::map<dai::CameraBoardSocket, SensorMetaInfo> SensorInfo;
 
             explicit DeviceMetaInfo(const std::shared_ptr<dai::Device>& device);
