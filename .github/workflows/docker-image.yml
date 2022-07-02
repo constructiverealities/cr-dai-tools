@@ -30,6 +30,7 @@ jobs:
         with:
           path: |
             c:/opt/
+            C:/.hunter
           key: ${{ runner.os }}-${{matrix.ros-distro}}-${{ matrix.build_type }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-${{matrix.ros-distro}}-${{ matrix.build_type }}

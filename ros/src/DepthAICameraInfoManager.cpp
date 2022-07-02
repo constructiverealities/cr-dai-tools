@@ -309,7 +309,7 @@ bool DepthaiCameraInfoManager::loadCalibrationFlash(const std::string &flashURL,
 
         if(socket == calibrationHandler.getStereoLeftCameraId()) {
             auto baseline_m = calibrationHandler.getBaselineDistance(calibrationHandler.getStereoRightCameraId(), calibrationHandler.getStereoLeftCameraId()) * .01;
-            cameraInfo.P[3] = - cameraInfo.P[0] * baseline_m;
+            //cameraInfo.P[3] = - cameraInfo.P[0] * baseline_m;
             copy(cameraInfo.R, saveData.stereoRectificationData.rectifiedRotationRight);
         } else if (socket == calibrationHandler.getStereoRightCameraId()) {
             copy(cameraInfo.R, saveData.stereoRectificationData.rectifiedRotationLeft);

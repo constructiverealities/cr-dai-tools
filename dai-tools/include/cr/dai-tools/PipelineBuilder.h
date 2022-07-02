@@ -4,64 +4,10 @@
 #include <depthai/device/Device.hpp>
 #include <utility>
 
+#include <cr/dai-tools/DeviceMetaInfo.h>
+
 namespace cr {
     namespace dai_tools {
-#if HAS_CR_FORK
-        typedef dai::CameraFeatures CameraFeatures;
-        typedef dai::CameraProperties::SensorResolution SensorResolution;
-        typedef SensorResolution ColorCameraResolution;
-        typedef SensorResolution MonoCameraResolution;
-#else
-        typedef dai::CameraProperties CameraFeatures;
-        typedef int32_t SensorResolution;
-        typedef dai::ColorCameraProperties::SensorResolution ColorCameraResolution;
-        typedef dai::MonoCameraProperties::SensorResolution MonoCameraResolution;
-#endif
-        typedef dai::CameraSensorType CameraSensorType;
-
-        std::shared_ptr<dai::Pipeline> GeneratePipeline(std::shared_ptr<dai::Device> &device);
-
-        struct SensorMetaInfo {
-            std::string SensorName;
-            CameraSensorType SensorType;
-            double FPS = 30;
-            SensorResolution Resolution = (SensorResolution)0;
-            std::vector<std::string> Outputs;
-
-            SensorMetaInfo() {}
-#ifndef HAS_CR_FORK
-            SensorMetaInfo(const std::string& name, CameraSensorType sensorType, double fps, ColorCameraResolution resolution) : SensorMetaInfo(name, sensorType, fps, (SensorResolution)resolution){}
-            SensorMetaInfo(const std::string& name, CameraSensorType sensorType, double fps, MonoCameraResolution resolution) : SensorMetaInfo(name, sensorType, fps, (SensorResolution)resolution){}
-#endif
-            SensorMetaInfo(const std::string& name, CameraSensorType sensorType, double fps, SensorResolution resolution);
-
-            dai::MonoCameraProperties::SensorResolution MonoResolution();
-
-            dai::ColorCameraProperties::SensorResolution ColorResolution();
-        };
-
-        class DeviceMetaInfo {
-        protected:
-            std::shared_ptr<dai::Device> device;
-            std::string SaveFileName() const;
-
-            void Load();
-        public:
-            std::string Name;
-            enum class OptionalBool {
-                DEFAULT = -1,
-                FALSE = 0,
-                TRUE = 1
-            };
-            dai::CameraBoardSocket StereoAlignment = dai::CameraBoardSocket::RIGHT;
-            OptionalBool UseIMU = OptionalBool::DEFAULT;
-            std::map<dai::CameraBoardSocket, SensorMetaInfo> SensorInfo;
-
-            explicit DeviceMetaInfo(const std::shared_ptr<dai::Device>& device);
-
-            void Save();
-        };
-
         class PipelineBuilder {
         protected:
             std::shared_ptr<dai::Pipeline> pipeline;
