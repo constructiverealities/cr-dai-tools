@@ -68,7 +68,12 @@ namespace cr {
             std::string name = "mono";
             if(stereo_depth_node) {
                 mono->out.link(features.socket == dai::CameraBoardSocket::LEFT ? stereo_depth_node->left : stereo_depth_node->right);
-                mono->setResolution(dai::MonoCameraProperties::SensorResolution::THE_400_P);
+
+                if(features.sensorName == "OV7251") {
+                    mono->setResolution(dai::MonoCameraProperties::SensorResolution::THE_480_P);
+                } else {
+                    mono->setResolution(dai::MonoCameraProperties::SensorResolution::THE_400_P);
+                }
 
                 // Stereo has a synced output for left/right, so we don't need one here.
                 return;
