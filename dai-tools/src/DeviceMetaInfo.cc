@@ -88,6 +88,8 @@ namespace cr {
 
             home = getenv("HOME");
             if(home && strcmp(home, "/") == 0) home = "";
+
+            if(!home) home = getenv("APPDATA");
             if(home) return std::string(home) + "/.local/share";
 
             return "./";

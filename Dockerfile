@@ -7,7 +7,7 @@ ENV PYTHONUNBUFFERED 1
 RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt \
 apt update && apt-get install --no-install-recommends -y \
     libusb-dev libusb-1.0-0-dev git cmake openssh-client ca-certificates make g++ automake build-essential autoconf software-properties-common libtool-bin udev \
-    catkin \
+    gdb catkin \
     libroscpp-dev  \
     librosbag-dev  \
     libsensor-msgs-dev \
@@ -40,16 +40,19 @@ ADD https://api.github.com/repos/$DEPTHAI_REPO/branches/$DEPTHAI_TAG cache-check
 RUN git clone -b $DEPTHAI_TAG https://github.com/$DEPTHAI_REPO.git --recursive /repos/depthai_core && \
     mkdir -p /build/depthai-core/$DEPTHAI_TAG && \
     cd /build/depthai-core/$DEPTHAI_TAG && cmake -DDEPTHAI_BUILD_EXAMPLES=OFF -DDEPTHAI_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=On /repos/depthai_core && make -j4 install && \
-    rm -rf /build /repos/depthai_core
+    rm -rf /build /repos/depthai_core /root/.hunter
 
-ADD . /ros_catkin_ws/src/cr-dai-tools
-RUN cd /ros_catkin_ws && catkin_make -DCMAKE_BUILD_TYPE=Release -DROS_BUILD=ON -DBUILD_DEPTHAI=ON -DCMAKE_INSTALL_PREFIX=/opt/ros/noetic install && rm -rf /ros_catkin_ws/build
+#ADD . /ros_catkin_ws/src/cr-dai-tools
+RUN --mount=type=bind,source=.,target=/ros_catkin_ws/src/cr-dai-tools,ro --mount=type=cache,target=/ros_catkin_ws/build \
+    cd /ros_catkin_ws && catkin_make -DCMAKE_BUILD_TYPE=Release -DROS_BUILD=ON -DBUILD_DEPTHAI=ON -DCMAKE_INSTALL_PREFIX=/opt/ros/noetic install
 
 ADD entrypoint.sh /
 
-RUN groupadd --gid 1000 cr-user && useradd --uid 1000 --gid cr-user --shell /bin/bash --create-home cr-user
+RUN groupadd --gid 1000 cr-user && useradd --uid 1000 --gid cr-user --shell /bin/bash -d /root -G sudo cr-user && echo "cr-user ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+RUN chown cr-user -R /root
 USER 1000:1000
 
-ENV ROS_DISTRO noetic
+ENV LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
+ENV ROS_LOAD_DISTRO=noetic
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/opt/ros/noetic/bin/autonode"]

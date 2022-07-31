@@ -13,9 +13,6 @@ static std::shared_ptr<dai::Device> get_device() {
 
 int main(int argc, char** argv) {
     auto d = get_device();
-    if(!d) {
-        return -1;
-    }
 
     if(!d) {
         return -1;
