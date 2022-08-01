@@ -1,11 +1,10 @@
-FROM debian:bullseye-slim
+FROM debian:bullseye-slim as build
 
 ARG DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-c"]
 ENV PYTHONUNBUFFERED 1
 
-RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt \
-apt update && apt-get install --no-install-recommends -y \
+RUN apt update && apt-get install --no-install-recommends -y \
     libusb-dev libusb-1.0-0-dev git cmake openssh-client ca-certificates make g++ automake build-essential autoconf software-properties-common libtool-bin udev \
     gdb catkin \
     libroscpp-dev  \
@@ -37,22 +36,42 @@ ARG DEPTHAI_REPO=constructiverealities/depthai
 ARG DEPTHAI_TAG=cr/develop
 
 ADD https://api.github.com/repos/$DEPTHAI_REPO/branches/$DEPTHAI_TAG cache-check
-RUN git clone -b $DEPTHAI_TAG https://github.com/$DEPTHAI_REPO.git --recursive /repos/depthai_core && \
+
+RUN --mount=type=cache,id=dai-build-$DEPTHAI_TAG,target=/build --mount=type=cache,target=/root/.hunter \
+    git clone -b $DEPTHAI_TAG https://github.com/$DEPTHAI_REPO.git --recursive /repos/depthai_core && \
     mkdir -p /build/depthai-core/$DEPTHAI_TAG && \
-    cd /build/depthai-core/$DEPTHAI_TAG && cmake -DDEPTHAI_BUILD_EXAMPLES=OFF -DDEPTHAI_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=On /repos/depthai_core && make -j4 install && \
-    rm -rf /build /repos/depthai_core /root/.hunter
+    cd /build/depthai-core/$DEPTHAI_TAG && cmake -DDEPTHAI_BUILD_EXAMPLES=OFF -DDEPTHAI_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=On /repos/depthai_core && make -j4 install
 
-#ADD . /ros_catkin_ws/src/cr-dai-tools
-RUN --mount=type=bind,source=.,target=/ros_catkin_ws/src/cr-dai-tools,ro --mount=type=cache,target=/ros_catkin_ws/build \
-    cd /ros_catkin_ws && catkin_make -DCMAKE_BUILD_TYPE=Release -DROS_BUILD=ON -DBUILD_DEPTHAI=ON -DCMAKE_INSTALL_PREFIX=/opt/ros/noetic install
+COPY . /ros_catkin_ws/src/cr-dai-tools
 
-ADD entrypoint.sh /
+RUN cd /ros_catkin_ws &&  \
+    catkin_make -DCMAKE_BUILD_TYPE=Release -DROS_BUILD=ON -DBUILD_DEPTHAI=ON -DCMAKE_INSTALL_PREFIX=/opt/ros/noetic install && \
+    find /usr/include && \
+    cat /ros_catkin_ws/build/CMakeFiles/CMakeError.log
+
+RUN mkdir -p needed_libs && \
+    ldd /opt/ros/noetic/bin/autonode | awk 'NF == 4 {print $3}; NF == 2 {print $1}' | uniq | grep  usr/lib | xargs -I {} cp -v -L {} /needed_libs
+
+CMD ["/opt/ros/noetic/bin/autonode"]
+
+FROM debian:bullseye-slim
+ENV PYTHONUNBUFFERED 1
+ARG DEBIAN_FRONTEND=noninteractive
+SHELL ["/bin/bash", "-c"]
+
+RUN apt update && apt-get install --no-install-recommends -y \
+    libexpat1 udev
+
+COPY --from=build /opt/ros/noetic /opt/ros/noetic
+COPY --from=build /etc/udev/rules.d/ /etc/udev/rules.d/
+COPY --from=build /needed_libs /usr/lib/x86_64-linux-gnu/
+#COPY --from=build /libusb_root /
 
 RUN groupadd --gid 1000 cr-user && useradd --uid 1000 --gid cr-user --shell /bin/bash -d /root -G sudo cr-user && echo "cr-user ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 RUN chown cr-user -R /root
-USER 1000:1000
+#USER 1000:1000
 
 ENV LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
 ENV ROS_LOAD_DISTRO=noetic
-ENTRYPOINT ["/entrypoint.sh"]
+#ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/opt/ros/noetic/bin/autonode"]

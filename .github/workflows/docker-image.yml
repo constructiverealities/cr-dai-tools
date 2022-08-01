@@ -119,6 +119,15 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_ROS2 }}
 
+      - name: Build and push Docker image
+        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=${{ steps.meta.outputs.tags }}
+
       - name: Build and push Docker image (stock DAI)
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
         with:
@@ -129,14 +138,7 @@ jobs:
             DEPTHAI_TAG=multi_cam_support
           tags: ${{ steps.meta_stock.outputs.tags }}
           labels: ${{ steps.meta_stock.outputs.labels }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=${{ steps.meta.outputs.tags }}
 
       - name: Build and push Docker image (ROS2)
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
@@ -146,3 +148,4 @@ jobs:
           push: true
           tags: ${{ steps.meta_ros2.outputs.tags }}
           labels: ${{ steps.meta_ros2.outputs.labels }}
+          cache-from: type=registry,ref=${{ steps.meta.outputs.tags }}
