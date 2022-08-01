@@ -69,7 +69,7 @@ COPY --from=build /needed_libs /usr/lib/x86_64-linux-gnu/
 
 RUN groupadd --gid 1000 cr-user && useradd --uid 1000 --gid cr-user --shell /bin/bash -d /root -G sudo cr-user && echo "cr-user ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 RUN chown cr-user -R /root
-#USER 1000:1000
+USER 1000:1000
 
 ENV LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
 ENV ROS_LOAD_DISTRO=noetic
