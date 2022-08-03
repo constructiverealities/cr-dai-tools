@@ -4,15 +4,16 @@ services:
     build: .
     image: ghcr.io/constructiverealities/cr-dai-tools/build:develop
     network_mode: host
-    command: /opt/ros/noetic/bin/autonode
+    command: /opt/ros/noetic/bin/depthai-daemon /opt/ros/noetic/bin/autonode
     privileged: true
     devices:
       - '/dev:/dev'
     volumes:
-      - '/dev:/dev'    
+      - '/dev:/dev'
       - '~/.local/share/cr-dai-tools:/root/.local/share/cr-dai-tools'      
     environment:
       - DEPTHAI_LEVEL="debug"
+      - LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
     restart: on-failure
   ui:
     image: osrf/ros:noetic-desktop-full
