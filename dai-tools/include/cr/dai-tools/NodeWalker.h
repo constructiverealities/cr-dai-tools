@@ -32,6 +32,9 @@ namespace cr {
                         dai::node::XLinkOut>(args..., node);
             }
 
+            virtual void VisitAll(Args... args, std::shared_ptr<dai::Pipeline> pipeline) {
+                VisitAll(args..., pipeline->getAllNodes());
+            }
             virtual void VisitAll(Args... args, std::vector <std::shared_ptr<dai::Node>> nodes) {
                 for (auto &n: nodes) {
                     StartVisit(args..., n);

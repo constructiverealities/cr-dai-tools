@@ -25,6 +25,16 @@ services:
       - '~/.Xauthority:/root/.Xauthority'
       - './perspectives:/host/perspectives'
     command: rosrun rqt_gui rqt_gui --perspective-file /host/perspectives/Default.perspective
+  opencv-ui:
+    build: .
+    image: ghcr.io/constructiverealities/cr-dai-tools/build:develop
+    network_mode: host
+    environment:
+      - 'DISPLAY=${DISPLAY}'
+    volumes:
+      - '/tmp/.X11-unix:/tmp/.X11-unix'
+      - '~/.Xauthority:/root/.Xauthority'
+    command: /opt/ros/noetic/bin/depthai-daemon /opt/ros/noetic/bin/example-ui
   roscore:
     image: osrf/ros:noetic-desktop-full
     network_mode: host

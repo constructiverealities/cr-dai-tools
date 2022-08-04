@@ -26,6 +26,7 @@ namespace cr {
             virtual void SetupPipeline() = 0;
 
             virtual std::shared_ptr<dai::Pipeline> Pipeline();
+            virtual void OnSetupPipeline(std::shared_ptr<dai::Pipeline> pipeline) {}
             virtual void OnStreamData(const std::string& stream_name, std::shared_ptr<dai::ADatatype> msg);
             virtual void OnStreamData(const std::string& stream_name, std::shared_ptr<dai::Buffer> msg);
             virtual void OnStreamData(const std::string& stream_name, std::shared_ptr<dai::ImgFrame> img);

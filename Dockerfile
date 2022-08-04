@@ -7,7 +7,8 @@ ENV PYTHONUNBUFFERED 1
 RUN apt update && apt-get install --no-install-recommends -y \
     libusb-dev libusb-1.0-0-dev git cmake openssh-client ca-certificates make g++ automake build-essential autoconf software-properties-common libtool-bin udev \
     gdb catkin \
-    libroscpp-dev  \
+    libroscpp-dev \
+    libopencv-highgui-dev \
     librosbag-dev  \
     libsensor-msgs-dev \
     libcv-bridge-dev \
@@ -40,7 +41,7 @@ ADD https://api.github.com/repos/$DEPTHAI_REPO/branches/$DEPTHAI_TAG cache-check
 RUN --mount=type=cache,id=dai-build-$DEPTHAI_TAG,target=/build --mount=type=cache,target=/root/.hunter \
     git clone -b $DEPTHAI_TAG https://github.com/$DEPTHAI_REPO.git --recursive /repos/depthai_core && \
     mkdir -p /build/depthai-core/$DEPTHAI_TAG && \
-    cd /build/depthai-core/$DEPTHAI_TAG && cmake -DDEPTHAI_BUILD_EXAMPLES=OFF -DDEPTHAI_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=On /repos/depthai_core && make -j4 install
+    cd /build/depthai-core/$DEPTHAI_TAG && cmake -DDEPTHAI_OPENCV_SUPPORT=ON -DDEPTHAI_BUILD_EXAMPLES=OFF -DDEPTHAI_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=On /repos/depthai_core && make -j4 install
 
 COPY . /ros_catkin_ws/src/cr-dai-tools
 
@@ -50,7 +51,7 @@ RUN cd /ros_catkin_ws &&  \
     cat /ros_catkin_ws/build/CMakeFiles/CMakeError.log
 
 RUN mkdir -p needed_libs && \
-    ldd /opt/ros/noetic/bin/autonode | awk 'NF == 4 {print $3}; NF == 2 {print $1}' | uniq | grep  usr/lib | xargs -I {} cp -v -L {} /needed_libs
+    ldd /opt/ros/noetic/bin/* | awk 'NF == 4 {print $3}; NF == 2 {print $1}' | uniq | grep  usr/lib | xargs -I {} cp -v -L {} /needed_libs
 
 CMD ["/opt/ros/noetic/bin/autonode"]
 

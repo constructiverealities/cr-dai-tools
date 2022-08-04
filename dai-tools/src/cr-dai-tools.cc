@@ -52,6 +52,7 @@ namespace cr {
 
         void AutoDeviceRunner::SetupPipeline() {
             pipeline = GeneratePipeline(device);
+            this->OnSetupPipeline(pipeline);
         }
 
         void DeviceRunner::OnStreamData(const std::string &stream_name, std::shared_ptr<dai::ADatatype> msg) {
