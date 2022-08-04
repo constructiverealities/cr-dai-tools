@@ -31,9 +31,9 @@ jobs:
           path: |
             c:/opt/
             C:/.hunter
-          key: ${{ runner.os }}-${{matrix.ros-distro}}-${{ matrix.build_type }}-${{ github.sha }}
+          key: ${{ runner.os }}-${{matrix.ros-distro}}-${{ matrix.build_type }}-1-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-${{matrix.ros-distro}}-${{ matrix.build_type }}
+            ${{ runner.os }}-${{matrix.ros-distro}}-${{ matrix.build_type }}-1
 
       - name: Setup cmake
         uses: jwlawson/actions-setup-cmake@v1.12

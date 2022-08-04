@@ -1,8 +1,5 @@
-#include <yaml-cpp/emittermanip.h>
-
-#include "cr/dai-tools/PipelineBuilder.h"
 #include "yaml-cpp/yaml.h"
-
+#include "cr/dai-tools/PipelineBuilder.h"
 
 namespace cr {
     namespace dai_tools {
