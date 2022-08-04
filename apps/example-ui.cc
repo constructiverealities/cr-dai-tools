@@ -2,7 +2,6 @@
 #include <depthai/depthai.hpp>
 #include <depthai/device/Device.hpp>
 
-#include <depthai/pipeline/node/ToF.hpp>
 #include <depthai/pipeline/node/Camera.hpp>
 
 #include "cr/dai-tools/PipelineBuilder.h"
@@ -290,6 +289,7 @@ struct OpenCVRunner : public cr::dai_tools::AutoDeviceRunner, cr::dai_tools::Nod
         return true;
     }
 
+#ifdef HAS_CR_FORK
     virtual bool Visit(std::shared_ptr <dai::node::ToF> cam) {
         depth_socket = dai::CameraBoardSocket::RGB;
         auto depth_intrinsics = calibration.getCameraIntrinsics(depth_socket);
@@ -305,6 +305,7 @@ struct OpenCVRunner : public cr::dai_tools::AutoDeviceRunner, cr::dai_tools::Nod
 
         return true;
     }
+#endif
 
     void OnStreamData(const std::string &event, std::shared_ptr<dai::ImgFrame> img) override {
         DeviceRunner::OnStreamData(event, img);

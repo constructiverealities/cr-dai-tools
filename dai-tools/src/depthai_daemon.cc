@@ -99,13 +99,13 @@ int main(int argc, char** argv)
         auto id = std::get<1>(avail_device).getMxId();
         if(devices[id] == 0 && id != "<error>") {
             devices[id] = std::make_shared<DeviceProcess>(process_string, id);
-            sleep(4);
+            std::this_thread::sleep_for(std::chrono::seconds(4));
         } else if(id != "<error>") {
                 output("daemon") << "Killing process for " << id << " -- it gave up the device" << std::endl;
                 devices[id].reset();
         }
 
-        usleep(1000 * 100);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
 }

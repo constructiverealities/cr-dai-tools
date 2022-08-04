@@ -1,5 +1,8 @@
 #pragma once
 
+#include "depthai/depthai.hpp"
+
+
 namespace cr {
     namespace dai_tools {
 
