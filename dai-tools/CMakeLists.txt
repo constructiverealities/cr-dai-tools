@@ -46,15 +46,20 @@ target_include_directories(cr-dai-tools PUBLIC include ${depthai_INCLUDE_DIRS})
 if(HAVE_CR_FORK)
   target_compile_options(cr-dai-tools PUBLIC "-DHAS_CR_FORK")
 endif()
-
-find_package(Boost)
-if(Boost_FOUND)
-  add_executable(depthai-daemon src/depthai_daemon.cc)
-  find_package( Threads )
-  target_include_directories(depthai-daemon PUBLIC include ${Boost_INCLUDE_DIR})
-  target_link_libraries (depthai-daemon depthai::core depthai::opencv ${OpenCV_LIBS} ${CMAKE_THREAD_LIBS_INIT} ${Boost_LIBRARIES})
-  install(TARGETS depthai-daemon DESTINATION bin)
-endif()
+#
+#find_package(Boost)
+#if(Boost_FOUND)
+#  add_executable(depthai-daemon src/depthai_daemon.cc)
+#  find_package( Threads )
+#  target_include_directories(depthai-daemon PUBLIC include ${Boost_INCLUDE_DIR})
+#  target_link_libraries (depthai-daemon depthai::core depthai::opencv ${OpenCV_LIBS} ${CMAKE_THREAD_LIBS_INIT} ${Boost_LIBRARIES})
+#
+#  if (MSVC)
+#    target_compile_definitions(depthai-daemon PRIVATE -DBOOST_PYTHON_STATIC_LIB)
+#  endif()
+#
+#  install(TARGETS depthai-daemon DESTINATION bin)
+#endif()
 
 install(TARGETS cr-dai-tools
         LIBRARY DESTINATION lib
