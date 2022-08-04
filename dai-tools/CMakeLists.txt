@@ -21,6 +21,7 @@ set(CMAKE_REQUIRED_INCLUDES ${DEPTHAI_INCLUDES} ${LIBNOP_INCLUDES})
 CHECK_STRUCT_HAS_MEMBER("class dai::node::ToF" inputConfig "depthai/pipeline/node/ToF.hpp" HAVE_CR_FORK LANGUAGE CXX)
 message("Has CR Fork: ${HAVE_CR_FORK}")
 
+set(BUILD_SHARED_LIBS OFF)
 if(NOT TARGET yaml-cpp)
   include(FetchContent)
   MESSAGE("Getting yaml")
@@ -29,7 +30,6 @@ if(NOT TARGET yaml-cpp)
           GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
           GIT_TAG yaml-cpp-0.7.0
   )
-
   option(YAML_BUILD_SHARED_LIBS "Build yaml-cpp shared library" OFF)
   FetchContent_MakeAvailable(yaml-cpp)
 
