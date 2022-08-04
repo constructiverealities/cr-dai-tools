@@ -1,10 +1,6 @@
 #define DEPTHAI_HAVE_OPENCV_SUPPORT 1
 #include <depthai/depthai.hpp>
 #include <depthai/device/Device.hpp>
-
-#include <depthai/pipeline/node/Camera.hpp>
-
-#include "cr/dai-tools/PipelineBuilder.h"
 #include "cr/dai-tools/DeviceRunner.h"
 #include "cr/dai-tools/NodeWalker.h"
 #include "cr/dai-tools/Utils.h"
