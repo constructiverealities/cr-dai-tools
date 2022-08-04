@@ -21,7 +21,6 @@ set(CMAKE_REQUIRED_INCLUDES ${DEPTHAI_INCLUDES} ${LIBNOP_INCLUDES})
 CHECK_STRUCT_HAS_MEMBER("class dai::node::ToF" inputConfig "depthai/pipeline/node/ToF.hpp" HAVE_CR_FORK LANGUAGE CXX)
 message("Has CR Fork: ${HAVE_CR_FORK}")
 
-set(BUILD_SHARED_LIBS OFF)
 if(NOT TARGET yaml-cpp)
   include(FetchContent)
   MESSAGE("Getting yaml")
@@ -46,34 +45,34 @@ target_include_directories(cr-dai-tools PUBLIC include ${depthai_INCLUDE_DIRS})
 if(HAVE_CR_FORK)
   target_compile_options(cr-dai-tools PUBLIC "-DHAS_CR_FORK")
 endif()
-#
-#find_package(Boost)
-#if(Boost_FOUND)
-#  add_executable(depthai-daemon src/depthai_daemon.cc)
-#  find_package( Threads )
-#  target_include_directories(depthai-daemon PUBLIC include ${Boost_INCLUDE_DIR})
-#  target_link_libraries (depthai-daemon depthai::core depthai::opencv ${OpenCV_LIBS} ${CMAKE_THREAD_LIBS_INIT} ${Boost_LIBRARIES})
-#
-#  if (MSVC)
-#    target_compile_definitions(depthai-daemon PRIVATE -DBOOST_PYTHON_STATIC_LIB)
-#  endif()
-#
-#  install(TARGETS depthai-daemon DESTINATION bin)
-#endif()
+
+find_package(Boost)
+if(Boost_FOUND)
+  add_executable(depthai-daemon src/depthai_daemon.cc)
+  find_package( Threads )
+  target_include_directories(depthai-daemon PUBLIC include ${Boost_INCLUDE_DIR})
+  target_link_libraries (depthai-daemon depthai::core depthai::opencv ${OpenCV_LIBS} ${CMAKE_THREAD_LIBS_INIT} ${Boost_LIBRARIES})
+
+  if (MSVC)
+    target_compile_definitions(depthai-daemon PRIVATE -DBOOST_PYTHON_STATIC_LIB)
+  endif()
+
+  install(TARGETS depthai-daemon DESTINATION bin)
+endif()
 
 install(TARGETS cr-dai-tools
         LIBRARY DESTINATION lib
         PUBLIC_HEADER DESTINATION include)
 
 
-find_package(OpenCV COMPONENTS core highgui imgproc )
-if(OpenCV_FOUND)
-  include_directories( ${OpenCV_INCLUDE_DIRS} )
-  add_executable(cr-dai-ui ../apps/example-ui.cc)
-  target_link_libraries(cr-dai-ui depthai::opencv cr-dai-tools ${OpenCV_LIBS})
-
-  install(TARGETS cr-dai-ui DESTINATION bin)
-  if(WIN32)
-    install(FILES $<TARGET_PDB_FILE:cr-dai-ui> DESTINATION bin OPTIONAL)
-  endif()
-endif()
+#find_package(OpenCV COMPONENTS core highgui imgproc )
+#if(OpenCV_FOUND)
+#  include_directories( ${OpenCV_INCLUDE_DIRS} )
+#  add_executable(cr-dai-ui ../apps/example-ui.cc)
+#  target_link_libraries(cr-dai-ui depthai::opencv cr-dai-tools ${OpenCV_LIBS})
+#
+#  install(TARGETS cr-dai-ui DESTINATION bin)
+#  if(WIN32)
+#    install(FILES $<TARGET_PDB_FILE:cr-dai-ui> DESTINATION bin OPTIONAL)
+#  endif()
+#endif()
