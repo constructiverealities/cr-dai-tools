@@ -67,5 +67,5 @@ jobs:
         with:
           name: build-${{matrix.ros-distro}}-${{ matrix.build_type }}
           path: |
-            c:\build-${{matrix.ros-distro}}\install
+            c:\build-${{matrix.ros-distro}}-${{ matrix.build_type }}\install
 
