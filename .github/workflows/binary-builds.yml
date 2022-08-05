@@ -36,33 +36,36 @@ jobs:
       - name: Install noetic
         if: ${{ matrix.ros-distro  == 'noetic' }}
         run: |
-          New-Item -ItemType Directory -Force -Path c:\opt\chocolatey
-          set ChocolateyInstall=c:\opt\chocolatey
-          dir c:\opt
-          choco config set cacheLocation c:\opt\chocolatey\cache
-          choco source add -n=ros-win -s="https://aka.ms/ros/public" --priority=1
-          choco upgrade ros-noetic-desktop_full -y --execution-timeout=0      --no-progress
+          if (-not(Test-Path -Path c:\opt\ros\noetic\x64\setup.ps1 -PathType Leaf)) {
+            New-Item -ItemType Directory -Force -Path c:\opt\chocolatey
+            set ChocolateyInstall=c:\opt\chocolatey
+            dir c:\opt
+            choco config set cacheLocation c:\opt\chocolatey\cache
+            choco source add -n=ros-win -s="https://aka.ms/ros/public" --priority=1
+            choco upgrade ros-noetic-desktop_full -y --execution-timeout=0      --no-progress
+          }
           echo "ROS_PATH=c:\opt\ros\noetic\x64" >> $env:GITHUB_ENV
       - name: Install foxy
         if: ${{ matrix.ros-distro  != 'noetic' }}
         run: |
-          New-Item -ItemType Directory -Force -Path c:\opt\chocolatey
-          set ChocolateyInstall=c:\opt\chocolatey
-          dir c:\opt          
-          choco config set cacheLocation c:\opt\chocolatey\cache
-          choco source add -n=ros-win -s="https://aka.ms/ros/public" --priority=1
-          choco upgrade ros-foxy-desktop -y --execution-timeout=0      --no-progress
+          if (-not(Test-Path -Path c:\opt\ros\foxy\x64\setup.ps1 -PathType Leaf)) {
+            New-Item -ItemType Directory -Force -Path c:\opt\chocolatey
+            set ChocolateyInstall=c:\opt\chocolatey
+            dir c:\opt          
+            choco config set cacheLocation c:\opt\chocolatey\cache
+            choco source add -n=ros-win -s="https://aka.ms/ros/public" --priority=1
+            choco upgrade ros-foxy-desktop -y --execution-timeout=0      --no-progress
+          }
           echo "ROS_PATH=c:\opt\ros\foxy\x64" >> $env:GITHUB_ENV
-
       - name: Run cmake
         run: |
-          md c:\build-${{matrix.ros-distro}}-${{ matrix.build_type }}
-          cd c:\build-${{matrix.ros-distro}}-${{ matrix.build_type }}
+          md ${{runner.workspace}}/build/
+          cd ${{runner.workspace}}/build/
           ${{ env.ROS_PATH }}/setup.ps1
           pip install -U cmake
-          cmake -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_DEPTHAI=ON -B c:\build-${{matrix.ros-distro}}-${{ matrix.build_type }} -S ${{ github.workspace }}
-          type c:\build-${{matrix.ros-distro}}-${{ matrix.build_type }}\CMakeCache.txt
-          cmake --build c:\build-${{matrix.ros-distro}}-${{ matrix.build_type }} -t install --config ${{ matrix.build_type }}
+          cmake -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_DEPTHAI=ON -B ${{runner.workspace}}/build/ -S ${{ github.workspace }}
+          type ${{runner.workspace}}/build/\CMakeCache.txt
+          cmake --build ${{runner.workspace}}/build/ -t install --config ${{ matrix.build_type }}
 
       - name: Set bundle name
         id: bundle
@@ -70,14 +73,14 @@ jobs:
 
       - name: Bundle
         working-directory: ${{runner.workspace}}
-        run: 7z a ${{runner.workspace}}/build/${{ steps.bundle.outputs.BUNDLE_FILE_NAME }} c:\build-${{matrix.ros-distro}}-${{ matrix.build_type }}\install
+        run: 7z a ${{runner.workspace}}/build/${{ steps.bundle.outputs.BUNDLE_FILE_NAME }} ${{runner.workspace}}/build/install
 
       - name: Create artifacts (Release)
         uses: actions/upload-artifact@v3
         with:
           name: build-${{matrix.ros-distro}}-${{ matrix.build_type }}
           path: |
-            c:\build-${{matrix.ros-distro}}-${{ matrix.build_type }}\install
+            ${{runner.workspace}}/build/install
             ${{runner.workspace}}/build/${{ steps.bundle.outputs.BUNDLE_FILE_NAME }}
 
       - name: Get release
