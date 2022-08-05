@@ -101,8 +101,6 @@ cr::dai_rosnode::ImagePublisher::ImagePublisher(std::shared_ptr<dai::DataOutputQ
 
 void cr::dai_rosnode::ImagePublisher::operator()(std::shared_ptr<dai::ImgFrame> inFrame) {
     try {
-        //pthread_setname_np(pthread_self(), Name().c_str());
-        //ROS_IMPL_INFO(_nh, "THread %s %p", Name().c_str(), pthread_self());
         auto tstamp = inFrame->getTimestamp();
         auto rosNow = ros_impl::now(_nh);
         auto steadyTime = std::chrono::steady_clock::now();

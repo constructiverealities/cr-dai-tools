@@ -6,6 +6,12 @@
 
 namespace cr {
     namespace dai_tools {
+        enum CameraOrientation {
+            Rotate0 = 0,
+            Rotate90,
+            Rotate180,
+            Rotate270
+        };
 #if HAS_CR_FORK
         typedef dai::CameraFeatures CameraFeatures;
         typedef dai::CameraProperties::SensorResolution SensorResolution;
@@ -27,9 +33,12 @@ namespace cr {
             double FPS = 30;
             SensorResolution Resolution = (SensorResolution)0;
             std::vector<std::string> Outputs;
+            enum CameraOrientation Orientation = CameraOrientation::Rotate0;
 
             SensorMetaInfo() {}
-            SensorMetaInfo(const std::string& name, CameraSensorType sensorType, double fps, SensorResolution resolution);
+            SensorMetaInfo(const std::string& name, CameraSensorType sensorType, double fps,
+                           SensorResolution resolution,
+                           enum CameraOrientation orientation = CameraOrientation::Rotate0);
 
             dai::MonoCameraProperties::SensorResolution MonoResolution();
 

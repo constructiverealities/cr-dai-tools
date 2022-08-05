@@ -65,7 +65,7 @@ install(TARGETS cr-dai-tools
         PUBLIC_HEADER DESTINATION include)
 
 
-find_package(OpenCV COMPONENTS core highgui imgproc )
+find_package(OpenCV COMPONENTS core highgui imgproc imgcodecs videoio)
 if(OpenCV_FOUND)
   add_executable(cr-dai-ui ../apps/example-ui.cc)
   target_include_directories(cr-dai-ui PUBLIC ${OpenCV_INCLUDE_DIRS})

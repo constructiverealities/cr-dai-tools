@@ -42,6 +42,16 @@ namespace cr {
             return dai::CameraSensorType::MONO;
         }
 
+        static enum CameraOrientation Str2CameraOrientation(const std::string& r) {
+#define X(n) if(r == #n) return CameraOrientation::n;
+            X(Rotate0)
+            X(Rotate90)
+            X(Rotate180)
+            X(Rotate270)
+#undef X
+            return CameraOrientation::Rotate0;
+        }
+
         static std::string SensorResolution2Str(SensorResolution r) {
 #define X(n) case SensorResolution::n: return #n;
             switch(r) {
@@ -59,6 +69,7 @@ namespace cr {
 #undef X
             return "Unknown";
         }
+
         static SensorResolution Str2SensorResolution(const std::string& r) {
 #define X(n) if(r == #n) return SensorResolution::n;
                 X(THE_400_P)
@@ -90,6 +101,18 @@ namespace cr {
             if(home) return std::string(home) + "/.local/share";
 
             return "./";
+        }
+
+        static std::string CameraOrientation2Str(enum CameraOrientation orientation) {
+            switch(orientation) {
+#define X(n) case(n): return #n;
+                X(Rotate0)
+                X(Rotate90)
+                X(Rotate180)
+                X(Rotate270)
+#undef X
+            }
+                return "Rotate0";
         }
 
         DeviceMetaInfo::DeviceMetaInfo(const std::shared_ptr<dai::Device> &device) : device(device) {
@@ -125,6 +148,7 @@ namespace cr {
                     out << YAML::Key << "FPS" << YAML::Value << infos.second.FPS;
                     out << YAML::Key << "SensorType" << YAML::Value << SensorType2Str(infos.second.SensorType);
                     out << YAML::Key << "Resolution" << YAML::Value << SensorResolution2Str(infos.second.Resolution);
+                    out << YAML::Key << "Orientation" << YAML::Value << CameraOrientation2Str(infos.second.Orientation);
                     out << YAML::Key << "Outputs" << YAML::Value << YAML::BeginSeq;
                     for (auto &o: infos.second.Outputs) {
                         out << o;
@@ -157,7 +181,8 @@ namespace cr {
                     auto newInfo = SensorMetaInfo(sensorMetadataNode["SensorName"].as<std::string>(""),
                                                   Str2SensorType(sensorMetadataNode["SensorType"].as<std::string>("MONO")),
                                                   sensorMetadataNode["FPS"].as<double>(30),
-                                                          Str2SensorResolution(sensorMetadataNode["Resolution"].as<std::string>("Unknown")));
+                                                  Str2SensorResolution(sensorMetadataNode["Resolution"].as<std::string>("Unknown")),
+                                                  Str2CameraOrientation(sensorMetadataNode["Orientation"].as<std::string>("Rotate0")));
                     if (socket != dai::CameraBoardSocket::AUTO) {
                         SensorInfo[(dai::CameraBoardSocket) socket] = newInfo;
                     }
@@ -167,8 +192,9 @@ namespace cr {
             }
         }
 
-        SensorMetaInfo::SensorMetaInfo(const std::string& name, dai::CameraSensorType sensorType, double fps, SensorResolution resolution)
-                : SensorName(name), SensorType(sensorType), FPS(fps), Resolution(resolution) {}
+        SensorMetaInfo::SensorMetaInfo(const std::string& name, dai::CameraSensorType sensorType, double fps,
+                                       SensorResolution resolution, enum CameraOrientation orientation)
+                : SensorName(name), SensorType(sensorType), FPS(fps), Resolution(resolution), Orientation(orientation) {}
 
         dai::MonoCameraProperties::SensorResolution SensorMetaInfo::MonoResolution() {
             switch(Resolution) {
@@ -179,7 +205,6 @@ namespace cr {
                 case SensorResolution::THE_720_P:
                     return dai::MonoCameraProperties::SensorResolution::THE_720_P;
                 case SensorResolution::THE_800_P:
-                    return dai::MonoCameraProperties::SensorResolution::THE_800_P;
                 case SensorResolution::THE_1080_P:
                 case SensorResolution::THE_1200_P:
                 case SensorResolution::THE_4_K:
