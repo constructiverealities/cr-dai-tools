@@ -54,7 +54,6 @@ if(Boost_FOUND)
   target_link_libraries (depthai-daemon depthai::core depthai::opencv ${OpenCV_LIBS} ${CMAKE_THREAD_LIBS_INIT} ${Boost_LIBRARIES})
 
   if (MSVC)
-    install(IMPORTED_RUNTIME_ARTIFACTS ${Boost_LIBRARIES})
     target_compile_definitions(depthai-daemon PRIVATE -DBOOST_PYTHON_STATIC_LIB)
   endif()
 

@@ -32,7 +32,7 @@ jobs:
       - name: Setup cmake
         uses: jwlawson/actions-setup-cmake@v1.12
         with:
-          cmake-version: '3.16.x'
+          cmake-version: '3.21.x'
       - name: Install noetic
         if: ${{ matrix.ros-distro  == 'noetic' }}
         run: |
@@ -59,6 +59,7 @@ jobs:
           md c:\build-${{matrix.ros-distro}}-${{ matrix.build_type }}
           cd c:\build-${{matrix.ros-distro}}-${{ matrix.build_type }}
           ${{ env.ROS_PATH }}/setup.ps1
+          pip install -U cmake
           cmake -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_DEPTHAI=ON -B c:\build-${{matrix.ros-distro}}-${{ matrix.build_type }} -S ${{ github.workspace }}
           type c:\build-${{matrix.ros-distro}}-${{ matrix.build_type }}\CMakeCache.txt
           cmake --build c:\build-${{matrix.ros-distro}}-${{ matrix.build_type }} -t install --config ${{ matrix.build_type }}
