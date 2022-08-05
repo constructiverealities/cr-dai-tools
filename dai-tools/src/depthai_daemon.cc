@@ -50,7 +50,8 @@ struct DeviceProcess {
 
             auto strip_id = "[" + id + "] ";
             std::string line;
-            while (pipe_stream && std::getline(pipe_stream, line) && !line.empty()) {
+            while (process.running()) {
+                std::getline(pipe_stream, line);
                 if(strncmp(line.c_str(), strip_id.c_str(), strip_id.size()) == 0) {
                     line = line.c_str() + strip_id.size();
                 }

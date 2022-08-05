@@ -46,7 +46,7 @@ if(HAVE_CR_FORK)
   target_compile_options(cr-dai-tools PUBLIC "-DHAS_CR_FORK")
 endif()
 
-find_package(Boost)
+find_package(Boost COMPONENTS system filesystem)
 if(Boost_FOUND)
   add_executable(depthai-daemon src/depthai_daemon.cc)
   find_package( Threads )

@@ -2,7 +2,7 @@ version: '2'
 services:   
   autonode:
     build: .
-    image: ghcr.io/constructiverealities/cr-dai-tools/build:develop
+    image: ghcr.io/constructiverealities/cr-dai-tools:develop
     network_mode: host
     command: /opt/ros/noetic/bin/depthai-daemon /opt/ros/noetic/bin/autonode
     privileged: true
