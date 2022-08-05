@@ -65,14 +65,14 @@ install(TARGETS cr-dai-tools
         PUBLIC_HEADER DESTINATION include)
 
 
-#find_package(OpenCV COMPONENTS core highgui imgproc )
-#if(OpenCV_FOUND)
-#  include_directories( ${OpenCV_INCLUDE_DIRS} )
-#  add_executable(cr-dai-ui ../apps/example-ui.cc)
-#  target_link_libraries(cr-dai-ui depthai::opencv cr-dai-tools ${OpenCV_LIBS})
-#
-#  install(TARGETS cr-dai-ui DESTINATION bin)
-#  if(WIN32)
-#    install(FILES $<TARGET_PDB_FILE:cr-dai-ui> DESTINATION bin OPTIONAL)
-#  endif()
-#endif()
+find_package(OpenCV COMPONENTS core highgui imgproc )
+if(OpenCV_FOUND)
+  add_executable(cr-dai-ui ../apps/example-ui.cc)
+  target_include_directories(cr-dai-ui PUBLIC ${OpenCV_INCLUDE_DIRS})
+  target_link_libraries(cr-dai-ui depthai::opencv cr-dai-tools ${OpenCV_LIBS})
+
+  install(TARGETS cr-dai-ui DESTINATION bin)
+  if(WIN32)
+    install(FILES $<TARGET_PDB_FILE:cr-dai-ui> DESTINATION bin OPTIONAL)
+  endif()
+endif()
