@@ -3,6 +3,9 @@ name: Create and publish a Docker image
 on:
   push:
     branches: ['develop']
+  release:
+    types:
+      - created
 
 env:
   REGISTRY: ghcr.io
@@ -27,6 +30,13 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get release
+        id: get_release
+        if: github.event_name == 'release'
+        uses: bruceadams/get-release@v1.2.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Cache Docker layers
         uses: actions/cache@v2

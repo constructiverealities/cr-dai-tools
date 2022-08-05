@@ -63,10 +63,39 @@ jobs:
           cmake -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_DEPTHAI=ON -B c:\build-${{matrix.ros-distro}}-${{ matrix.build_type }} -S ${{ github.workspace }}
           type c:\build-${{matrix.ros-distro}}-${{ matrix.build_type }}\CMakeCache.txt
           cmake --build c:\build-${{matrix.ros-distro}}-${{ matrix.build_type }} -t install --config ${{ matrix.build_type }}
+
+      - name: Set bundle name
+        id: bundle
+        run: echo "::set-output name=BUNDLE_FILE_NAME::depthai-tof-demo-$(git describe --tags --always)-${{ matrix.os }}.zip"
+
+      - name: Bundle
+        working-directory: ${{runner.workspace}}
+        run: 7z a ${{runner.workspace}}/build/${{ steps.bundle.outputs.BUNDLE_FILE_NAME }} c:\build-${{matrix.ros-distro}}-${{ matrix.build_type }}\install
+
       - name: Create artifacts (Release)
         uses: actions/upload-artifact@v3
         with:
           name: build-${{matrix.ros-distro}}-${{ matrix.build_type }}
           path: |
             c:\build-${{matrix.ros-distro}}-${{ matrix.build_type }}\install
+            ${{runner.workspace}}/build/${{ steps.bundle.outputs.BUNDLE_FILE_NAME }}
 
+      - name: Get release
+        id: get_release
+        if: github.event_name == 'release'
+        uses: bruceadams/get-release@v1.2.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Release Asset
+        id: upload-release-asset
+        continue-on-error: true
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: ${{runner.workspace}}/build/${{steps.bundle.outputs.BUNDLE_FILE_NAME}}
+          asset_name: ${{steps.bundle.outputs.BUNDLE_FILE_NAME}}
+          asset_content_type: application/zip
