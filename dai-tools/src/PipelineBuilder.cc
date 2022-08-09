@@ -22,7 +22,7 @@ namespace cr {
 
         void PipelineBuilder::HandleOV9_82(const CameraFeatures &features) {
             auto sensorInfo = metaInfo.SensorInfo.find(features.socket);
-            bool isColor = false;
+            bool isColor = true;
             if(sensorInfo == metaInfo.SensorInfo.end()) {
                 std::cerr
                         << "Warning: OV9*82 camera can not reliably be differentiated between color and mono. Override `HandleOV9_82` with the correct logic for your board"
