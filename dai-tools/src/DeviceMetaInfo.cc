@@ -127,7 +127,11 @@ namespace cr {
         std::string DeviceMetaInfo::SaveFileName() const {
             auto fn = "dai_" + device->getMxId() + ".yml";
             auto saveDir = GetSaveDir() + "/cr-dai-tools/devices.d/";
-            std::filesystem::create_directories(saveDir);
+            try {
+                std::filesystem::create_directories(saveDir);
+            } catch(std::filesystem::filesystem_error& e) {
+                std::cerr << "Warning: Could not create meta-info directory: " << e.what() << std::endl;
+            }
             return saveDir + fn;
         }
 
@@ -164,11 +168,18 @@ namespace cr {
             std::cerr << "Saving metadata file to " << fn << std::endl;
             std::ofstream fs(SaveFileName());
             fs << out.c_str() << std::endl;
+            fs.close();
+            if(!fs) {
+                std::cerr << "Warning: Writing metadata file to " << fn << " failed" << std::endl;
+            }
         }
         void DeviceMetaInfo::Load() {
             auto fn = SaveFileName();
             std::ifstream fs(fn);
             auto yaml = YAML::Load(fs);
+            if(!fs) {
+                std::cerr << "Warning: Reading metadata file from " << fn << " failed" << std::endl;
+            }
             Name = yaml["Name"].as<std::string>(Name);
             std::cerr << "Loading meta info for " << Name << " from " << fn << std::endl;
 

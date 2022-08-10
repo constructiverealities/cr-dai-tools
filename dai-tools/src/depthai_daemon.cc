@@ -51,11 +51,12 @@ struct DeviceProcess {
             auto strip_id = "[" + id + "] ";
             std::string line;
             while (process.running()) {
-                std::getline(pipe_stream, line);
-                if(strncmp(line.c_str(), strip_id.c_str(), strip_id.size()) == 0) {
-                    line = line.c_str() + strip_id.size();
+                if(std::getline(pipe_stream, line)) {
+                    if (strncmp(line.c_str(), strip_id.c_str(), strip_id.size()) == 0) {
+                        line = line.c_str() + strip_id.size();
+                    }
+                    output(id) << line << std::endl;
                 }
-                output(id) << line << std::endl;
             }
             output(id) << "Exiting with status " << process.exit_code() << std::endl;
         });
@@ -90,23 +91,24 @@ int main(int argc, char** argv)
     }
 
     while (true) {
-        auto avail_device = dai::Device::getFirstAvailableDevice();
+        auto avail_devices = dai::Device::getAllAvailableDevices();
 
-        if(!std::get<0>(avail_device))
+        if (avail_devices.size() == 0) {
             continue;
-
-        output("daemon") << "Found " << std::get<1>(avail_device).getMxId() << std::endl;
-
-        auto id = std::get<1>(avail_device).getMxId();
-        if(devices[id] == 0 && id != "<error>") {
-            devices[id] = std::make_shared<DeviceProcess>(process_string, id);
-            std::this_thread::sleep_for(std::chrono::seconds(4));
-        } else if(id != "<error>") {
-                output("daemon") << "Killing process for " << id << " -- it gave up the device" << std::endl;
-                devices[id].reset();
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        for(auto& avail_device : avail_devices) {
+            output("daemon") << "Found " << avail_device.getMxId() << std::endl;
+            auto id = avail_device.getMxId();
+            if (devices[id] == 0 && id != "<error>") {
+                devices[id] = std::make_shared<DeviceProcess>(process_string, id);
+                std::this_thread::sleep_for(std::chrono::seconds(4));
+            } else if (id != "<error>") {
+                output("daemon") << "Killing process for " << id << " -- it gave up the device" << std::endl;
+                devices[id].reset();
+            }
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 
 }

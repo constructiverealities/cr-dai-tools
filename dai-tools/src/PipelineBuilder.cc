@@ -98,20 +98,22 @@ namespace cr {
         float GetFPS(const SensorMetaInfo& sensorMetaInfo) {
             std::string env_key = "CR_" + sensorMetaInfo.SensorName + "_FPS";
             if(auto fps = std::getenv(env_key.c_str())) {
-                return std::stod(fps);
+                if(fps[0] != 0)
+                    return std::stod(fps);
             }
             return sensorMetaInfo.FPS;
         }
 
         void PipelineBuilder::HandleToF(const CameraFeatures &features) {
 #if HAS_CR_FORK
-            SensorMetaInfo sensorMetaInfo;
             if(metaInfo.SensorInfo.find(features.socket) == metaInfo.SensorInfo.end()) {
-                sensorMetaInfo = metaInfo.SensorInfo[features.socket] =
+                printf("Generating default metainfo for %s\n", features.sensorName.c_str());
+                metaInfo.SensorInfo[features.socket] =
                         SensorMetaInfo(features.sensorName,dai::CameraSensorType::TOF,
                                        30, dai::CameraProperties::SensorResolution::THE_400_P);
             }
 
+            SensorMetaInfo sensorMetaInfo = metaInfo.SensorInfo[features.socket];
             auto xinPicture = pipeline->create<dai::node::Camera>();
             xinPicture->setBoardSocket(features.socket);
             xinPicture->setFps(GetFPS(sensorMetaInfo));

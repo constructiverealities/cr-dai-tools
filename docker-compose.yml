@@ -10,10 +10,15 @@ services:
       - '/dev:/dev'
     volumes:
       - '/dev:/dev'
-      - '~/.local/share/cr-dai-tools:/root/.local/share/cr-dai-tools'      
+      - '~/.local/share/cr-dai-tools:/root/.local/share/cr-dai-tools'
     environment:
       - DEPTHAI_LEVEL="debug"
       - LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
+      - CR_TOF_FILTER_CONFIG_OZT0358
+      - DEPTHAI_DEVICE_BINARY
+      - CR_OZT0358_FPS
+      - CR_MTP006_FPS
+      - DEPTHAI_LEVEL
     restart: on-failure
   ui:
     image: osrf/ros:noetic-desktop-full
