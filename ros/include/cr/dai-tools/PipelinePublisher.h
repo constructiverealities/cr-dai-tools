@@ -17,7 +17,8 @@ namespace cr {
             std::string mxId;
             std::set<std::string> mappedQueues;
             std::shared_ptr<dai::DataOutputQueue> getOutputQueue(std::shared_ptr<dai::node::XLinkOut> xlinkOut, int qsize = 4, bool blocking = false);
-            ros_impl::sensor_msgs::CameraInfo CameraInfo(dai::CameraBoardSocket cameraId, int width, int height, dai::Point2f topLeftPixelId = {}, dai::Point2f bottomRightPixelId = {});
+            std::shared_ptr<DepthaiCameraInfoManager> CameraInfoManager(dai::CameraBoardSocket cameraId, int width, int height, dai::Point2f topLeftPixelId = {}, dai::Point2f bottomRightPixelId = {});
+
             ros_impl::Node& _device_node;
             std::shared_ptr<dai::Device> _device;
             std::string _frame_prefix;

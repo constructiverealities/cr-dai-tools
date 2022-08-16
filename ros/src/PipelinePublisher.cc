@@ -299,12 +299,11 @@ namespace cr {
                    const std::string& inputName, std::shared_ptr<dai::node::Camera> inputNode) {
             auto queue = getOutputQueue(xLinkOut, 4, false);
 
-            ros_impl::sensor_msgs::CameraInfo rawCameraInfo;
             make_publisher<ImagePublisher>(
                     queue,
                     getNodeHandle(inputNode->getBoardSocket()),
                     30,
-                    rawCameraInfo,
+                    nullptr,
                     xLinkOut);
 
             return true;
@@ -316,19 +315,19 @@ namespace cr {
 
             int width = -1, height = -1;
             auto socket = dai::CameraBoardSocket::RGB;
-            auto cameraInfo = CameraInfo(socket, width, height);
+            auto cameraInfoManager = CameraInfoManager(socket, width, height);
             if(inputName == "out") {
                 make_publisher<ToFDepthPublisher>(
                         queue,
                         getNodeHandle(socket),
                         30,
-                        cameraInfo, xLinkOut);
+                        cameraInfoManager, xLinkOut);
             } else {
                 make_publisher<ImagePublisher>(
                         queue,
                         getNodeHandle(socket),
                         30,
-                        cameraInfo, xLinkOut);
+                        cameraInfoManager, xLinkOut);
             }
             return true;
         }
@@ -341,12 +340,12 @@ namespace cr {
             width = inputNode->getResolutionWidth();
             height = inputNode->getResolutionHeight();
 
-            auto cameraInfo = CameraInfo(inputNode->getBoardSocket(), width, height);
+            auto cameraInfoManager = CameraInfoManager(inputNode->getBoardSocket(), width, height);
             auto publisher = make_publisher<ImagePublisher>(
                     queue,
                     getNodeHandle(inputNode->getBoardSocket()),
                     30,
-                    cameraInfo, xLinkOut);
+                    cameraInfoManager, xLinkOut);
             return true;
         }
         bool PipelinePublisher::Visit(SetupPublishers, std::shared_ptr<dai::node::XLinkOut> xLinkOut,
@@ -370,12 +369,12 @@ namespace cr {
                 ROS_IMPL_WARN (_device_node, "Don't understand output named %s in ColorCamera. Using default image size for intrinsics", inputName.c_str());
             }
 
-            auto rgbCameraInfo = CameraInfo(inputNode->getBoardSocket(), width, height);
+            auto rgbCameraInfoManager = CameraInfoManager(inputNode->getBoardSocket(), width, height);
             make_publisher<ImagePublisher>(
                     queue,
                     getNodeHandle(inputNode->getBoardSocket()),
                     30,
-                    rgbCameraInfo,
+                    rgbCameraInfoManager,
                     xLinkOut);
 
             return true;
@@ -433,9 +432,7 @@ namespace cr {
                     return true;
                 }
             }
-            auto depthCameraInfo = CameraInfo(alignSocket, width, height);
-            for(auto& d : depthCameraInfo.D)
-                d = 0;
+            auto depthCameraInfoManager = CameraInfoManager(alignSocket, width, height);
 
             if(inputName == "depth") {
                 //converter = std::make_shared<ImageConverter>(_frame_prefix + frame, true);
@@ -443,8 +440,9 @@ namespace cr {
                         queue,
                         _device_node,
                         30,
-                        depthCameraInfo,
-                        xLinkOut);
+                        depthCameraInfoManager,
+                        xLinkOut,
+                        true);
             } else if(inputName == "disparity") {
 //                auto converter =
 //                        std::make_shared<dai::rosBridge::DisparityConverter>(_frame_prefix + frame, 880, 7.5, 20,
@@ -465,8 +463,8 @@ namespace cr {
                         queue,
                         _device_node,
                         30,
-                        depthCameraInfo,
-                        xLinkOut);
+                        depthCameraInfoManager,
+                        xLinkOut, true);
             } else if(inputName == "rectifiedLeft" || inputName == "rectifiedRight" || inputName == "syncedRight" || inputName == "syncedLeft") {
                 bool isLeft = (inputName == "rectifiedLeft" || inputName == "syncedLeft");
 
@@ -489,19 +487,15 @@ namespace cr {
                     return true;
                 }
 
-                auto cameraInfo = CameraInfo(monoNode->getBoardSocket(),
+                auto cameraInfoManager = CameraInfoManager(monoNode->getBoardSocket(),
                                                           monoNode->getResolutionWidth(),
                                                           monoNode->getResolutionHeight());
-                if(isRect) {
-                    for(auto& d : cameraInfo.D)
-                        d = 0;
-                }
                 make_publisher<ImagePublisher>(
                         queue,
                         getNodeHandle(socket),
                         30,
-                        cameraInfo,
-                        xLinkOut);
+                        cameraInfoManager,
+                        xLinkOut, isRect);
             } else {
                 ROS_IMPL_WARN (_device_node, "Don't understand output named %s in StereoDepth", inputName.c_str());
             }
@@ -549,9 +543,10 @@ namespace cr {
             return _nodeHandles[socket];
         }
 
-        ros_impl::sensor_msgs::CameraInfo PipelinePublisher::CameraInfo(dai::CameraBoardSocket socket, int width, int height,
-                                                              dai::Point2f topLeftPixelId,
-                                                              dai::Point2f bottomRightPixelId) {
+        std::shared_ptr<DepthaiCameraInfoManager> PipelinePublisher::CameraInfoManager(dai::CameraBoardSocket socket,
+                                                                                       int width, int height,
+                                                                                       dai::Point2f topLeftPixelId,
+                                                                                       dai::Point2f bottomRightPixelId) {
             auto manager = _cameraManagers[socket];
             if(!manager) {
                 auto ns = default_frame_mapping()[socket];
@@ -559,8 +554,7 @@ namespace cr {
                 _cameraManagers[socket] = manager = DepthaiCameraInfoManager::get(_device, _calibrationHandler, socket, getNodeHandle(socket), cname,
                                                                                   "flash:///", width, height, topLeftPixelId, bottomRightPixelId);
             }
-            //return ros_impl::sensor_msgs::CameraInfo();
-            return manager->getCameraInfo();
+            return manager;
         }
 
         std::shared_ptr<dai::DataOutputQueue>

@@ -92,9 +92,9 @@ static void dai_to_rosimg(const ros_impl::Node& n, std::shared_ptr<dai::ImgFrame
 cr::dai_rosnode::ImagePublisher::ImagePublisher(std::shared_ptr<dai::DataOutputQueue> daiMessageQueue,
                                                 const ros_impl::Node& nh,
                                                 int queueSize,
-                                                const ros_impl::sensor_msgs::CameraInfo& cameraInfoData,
-                                                std::shared_ptr<dai::node::XLinkOut> xlinkOut) :
-        _cameraInfoData(cameraInfoData),
+                                                std::shared_ptr<DepthaiCameraInfoManager> cameraInfoManager,
+                                                std::shared_ptr<dai::node::XLinkOut> xlinkOut, bool isRectified) :
+        _cameraInfoManager(cameraInfoManager), isRectified(isRectified),
         Publisher_<dai::ImgFrame, ros_impl::sensor_msgs::Image>(daiMessageQueue, nh, queueSize, xlinkOut) {
     ROS_IMPL_INFO(nh, "Creating image publisher for ns %s/%s", ros_impl::Namespace(nh), xLinkOut->getStreamName().c_str());
 }
@@ -111,25 +111,29 @@ void cr::dai_rosnode::ImagePublisher::operator()(std::shared_ptr<dai::ImgFrame> 
         int64_t nsec = rosNow.toNSec() - diffTime.count();
 #endif
         auto rosStamp = ros_impl::Time(nsec / 1000000000, nsec % 1000000000);
+
         ros_impl::std_msgs::Header header;
-        header.frame_id = _cameraInfoData.header.frame_id;
+
 #ifndef HAS_ROS2
         header.seq = inFrame->getSequenceNum();
 #endif
         header.stamp = rosStamp;
         std::string encoding;
 
-        //_cameraInfoData.header.seq = inFrame->getSequenceNum();
-        _cameraInfoData.header.stamp = rosStamp;
+        if(_cameraInfoManager) {
+            auto _cameraInfoData = _cameraInfoManager->getCameraInfo(isRectified);
+            header.frame_id = _cameraInfoData.header.frame_id;
+            _cameraInfoData.header.stamp = rosStamp;
 
-        if (hasDataListeners()) {
-            ros_impl::sensor_msgs::Image imageBuffer;
-            dai_to_rosimg(_nh, inFrame, imageBuffer);
-            imageBuffer.header = header;
-            publisher->publish(imageBuffer);
+            if (hasDataListeners()) {
+                ros_impl::sensor_msgs::Image imageBuffer;
+                dai_to_rosimg(_nh, inFrame, imageBuffer);
+                imageBuffer.header = header;
+                publisher->publish(imageBuffer);
+            }
+            _cameraInfoData.header = header;
+            _cameraInfoPub->publish(_cameraInfoData);
         }
-        _cameraInfoData.header = header;
-        _cameraInfoPub->publish(_cameraInfoData);
 
 #ifdef HAS_IDL_SUPPORT
 #ifdef HAS_CAMERA_METADATA_SUPPORT

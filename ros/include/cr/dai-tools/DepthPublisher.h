@@ -27,8 +27,8 @@ namespace cr {
             DepthPublisher(std::shared_ptr<dai::DataOutputQueue> daiMessageQueue,
                            const ros_impl::Node& nh,
                            int queueSize,
-                           const ros_impl::sensor_msgs::CameraInfo& cameraInfoData,
-                           std::shared_ptr<dai::node::XLinkOut>);
+                           std::shared_ptr<DepthaiCameraInfoManager> cameraInfoManager,
+                           std::shared_ptr<dai::node::XLinkOut>, bool isRectified = false);
 
             void Setup() override;
 

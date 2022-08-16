@@ -22,7 +22,8 @@ namespace cr {
 #endif
 #endif
             ros_impl::Publisher<ros_impl::sensor_msgs::CameraInfo> _cameraInfoPub;
-            ros_impl::sensor_msgs::CameraInfo _cameraInfoData;
+            std::shared_ptr<DepthaiCameraInfoManager> _cameraInfoManager;
+            bool isRectified = false;
 
             void operator()(std::shared_ptr<dai::ImgFrame> msg) override;
             bool hasDataListeners() const override;
@@ -30,8 +31,8 @@ namespace cr {
             ImagePublisher(std::shared_ptr<dai::DataOutputQueue> daiMessageQueue,
                            const ros_impl::Node& nh,
                            int queueSize,
-                           const ros_impl::sensor_msgs::CameraInfo& cameraInfoData,
-                           std::shared_ptr<dai::node::XLinkOut>);
+                           std::shared_ptr<DepthaiCameraInfoManager> cameraInfoManager,
+                           std::shared_ptr<dai::node::XLinkOut>, bool isRectified = false);
 
             void Setup() override;
         };

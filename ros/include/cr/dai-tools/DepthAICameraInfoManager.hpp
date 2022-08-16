@@ -30,6 +30,10 @@ protected:
                              dai::Point2f bottomRightPixelId = { });
 
 public:
+    ros_impl::sensor_msgs::CameraInfo getCameraInfo(void) override;
+
+public:
+    ros_impl::sensor_msgs::CameraInfo getCameraInfo(bool isRectified);
     dai::Device &Device() { return *device; }
     enum dai::CameraBoardSocket Socket() { return socket; }
     std::string cname() const { return camera_name_; }

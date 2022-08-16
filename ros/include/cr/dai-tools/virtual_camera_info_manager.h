@@ -19,7 +19,7 @@ namespace shim {
                         const std::string &url="");
                         virtual ~CameraInfoManager();
 
-                        virtual ros_impl::sensor_msgs::CameraInfo getCameraInfo(void);
+            virtual ros_impl::sensor_msgs::CameraInfo getCameraInfo(void);
                         virtual bool isCalibrated(void);
                         virtual bool loadCameraInfo(const std::string &url);
                         virtual std::string resolveURL(const std::string &url,

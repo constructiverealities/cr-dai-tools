@@ -205,7 +205,6 @@ bool saveAllCalibrationData(const ros_impl::Node& n, const std::shared_ptr<dai::
             auto lookupTime = ros_impl::Time(0);
             /// NOTE: lookupTransform is target, source. setCameraExtrinsics is source, target.
             if(buffer(n).canTransform(nextFrame, thisFrame, lookupTime), &error_msg) {
-                //auto tx = buffer.lookupTransform(nextFrame, thisFrame, ros::Time(0));
                 auto tx = buffer(n).lookupTransform(thisFrame, nextFrame, lookupTime);
                 tf2::Matrix3x3 rot;
                 rot.setRotation(tf2::Quaternion(tx.transform.rotation.x,
@@ -323,4 +322,18 @@ bool DepthaiCameraInfoManager::loadCalibrationFlash(const std::string &flashURL,
         this->setCameraInfo(cameraInfo);
         return true;
     }
+}
+
+ros_impl::sensor_msgs::CameraInfo DepthaiCameraInfoManager::getCameraInfo(bool isRectified) {
+    auto info = this->shim::camera_info_manager::CameraInfoManager::getCameraInfo();
+    if(isRectified) {
+        for (auto &d: info.D) {
+            d = 0;
+        }
+    }
+    return info;
+}
+
+ros_impl::sensor_msgs::CameraInfo DepthaiCameraInfoManager::getCameraInfo(void) {
+    return CameraInfoManager::getCameraInfo();
 }

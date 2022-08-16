@@ -4,12 +4,14 @@
 void cr::dai_rosnode::DepthPublisher::Setup() {
     ImagePublisher::Setup();
 
+    auto _cameraInfoData = _cameraInfoManager->getCameraInfo(isRectified);
+
     pointcloudMapPublisher = ros_impl::create_publisher<ros_impl::sensor_msgs::Image>(_nh, "pointcloud_map", queueSize);
     pointcloudPublisher = ros_impl::create_publisher<ros_impl::sensor_msgs::PointCloud2>(_nh, "pointcloud", queueSize);
 
     pc_template.is_dense = true;
-    pc_template.height = this->_cameraInfoData.height;
-    pc_template.width = this->_cameraInfoData.width;
+    pc_template.height = _cameraInfoData.height;
+    pc_template.width = _cameraInfoData.width;
     pc_template.point_step = sizeof (float ) * 3;
     pc_template.row_step = pc_template.point_step * pc_template.width;
 
@@ -41,15 +43,16 @@ void cr::dai_rosnode::DepthPublisher::Setup() {
 }
 
 cr::dai_rosnode::DepthPublisher::DepthPublisher(std::shared_ptr<dai::DataOutputQueue> daiMessageQueue, const ros_impl::Node& nh, int queueSize,
-                                const ros_impl::sensor_msgs::CameraInfo& cameraInfoData, std::shared_ptr<dai::node::XLinkOut> out) :
-                                cr::dai_rosnode::ImagePublisher(daiMessageQueue, nh, queueSize, cameraInfoData, out),
-                                depthMapper(createDepthMapper(cameraInfoData)){
+                                                std::shared_ptr<DepthaiCameraInfoManager> cameraInfoManager,
+                                                std::shared_ptr<dai::node::XLinkOut> out, bool isRectified) :
+                                cr::dai_rosnode::ImagePublisher(daiMessageQueue, nh, queueSize, cameraInfoManager, out, isRectified),
+                                depthMapper(createDepthMapper(cameraInfoManager->getCameraInfo(isRectified))){
 
 }
 
 void cr::dai_rosnode::DepthPublisher::operator()(std::shared_ptr<dai::ImgFrame> msg) {
     ImagePublisher::operator()(msg);
-
+    auto _cameraInfoData = _cameraInfoManager->getCameraInfo(isRectified);
     if(ros_impl::get_subscription_count(_nh, pointcloudPublisher) > 0){
         auto pc = pc_template;
 #ifndef HAS_ROS2
