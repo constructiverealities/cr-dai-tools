@@ -6,8 +6,8 @@ namespace cr {
             ros_impl::geometry_msgs::TransformStamped identityTx(const std::string& src, const std::string& dst) {
                 ros_impl::geometry_msgs::TransformStamped pose_msg;
                 //pose_msg.header.seq = 1;
-                pose_msg.header.frame_id = src;
-                pose_msg.child_frame_id = dst;
+                pose_msg.header.frame_id = dst;
+                pose_msg.child_frame_id = src;
 
                 pose_msg.transform.translation.x = 0;
                 pose_msg.transform.translation.y = 0;
@@ -27,12 +27,12 @@ namespace cr {
                 return pose_msg;
             }
             ros_impl::geometry_msgs::TransformStamped daiExtrinsics2Tx(const std::vector<std::vector<float>>& extrinsics, const std::string& src, const std::string& dst) {
-                /// TransformStamped describes the transform from frame_id _to_ child_frame_id; in meters
+                /// TransformStamped describes the transform from child_frame_id _to_ frame_id; in meters
                 /// DepthAI extrinsics are src -> dest in cm
                 ros_impl::geometry_msgs::TransformStamped pose_msg;
                 //pose_msg.header.seq = 1;
-                pose_msg.header.frame_id = src;
-                pose_msg.child_frame_id = dst;
+                pose_msg.header.frame_id = dst;
+                pose_msg.child_frame_id = src;
 
                 pose_msg.transform.translation.x = extrinsics[0][3] * .01;
                 pose_msg.transform.translation.y = extrinsics[1][3] * .01;

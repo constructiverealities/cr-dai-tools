@@ -125,14 +125,15 @@ void cr::dai_rosnode::ImagePublisher::operator()(std::shared_ptr<dai::ImgFrame> 
             header.frame_id = _cameraInfoData.header.frame_id;
             _cameraInfoData.header.stamp = rosStamp;
 
-            if (hasDataListeners()) {
-                ros_impl::sensor_msgs::Image imageBuffer;
-                dai_to_rosimg(_nh, inFrame, imageBuffer);
-                imageBuffer.header = header;
-                publisher->publish(imageBuffer);
-            }
             _cameraInfoData.header = header;
             _cameraInfoPub->publish(_cameraInfoData);
+        }
+
+        if (hasDataListeners()) {
+            ros_impl::sensor_msgs::Image imageBuffer;
+            dai_to_rosimg(_nh, inFrame, imageBuffer);
+            imageBuffer.header = header;
+            publisher->publish(imageBuffer);
         }
 
 #ifdef HAS_IDL_SUPPORT

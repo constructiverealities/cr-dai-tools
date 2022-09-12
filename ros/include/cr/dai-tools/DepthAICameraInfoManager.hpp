@@ -14,7 +14,7 @@ protected:
     std::shared_ptr<dai::Device> device;
     enum dai::CameraBoardSocket socket;
 
-    int width; int height;
+
     dai::Point2f topLeftPixelId;
     dai::Point2f bottomRightPixelId;
     bool setCameraInfoService(ros_impl::sensor_msgs::SetCameraInfo::Request &req, ros_impl::sensor_msgs::SetCameraInfo::Response &rsp) override;
@@ -31,6 +31,7 @@ protected:
 
 public:
     ros_impl::sensor_msgs::CameraInfo getCameraInfo(void) override;
+    int width; int height;
 
 public:
     ros_impl::sensor_msgs::CameraInfo getCameraInfo(bool isRectified);

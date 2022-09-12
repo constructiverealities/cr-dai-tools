@@ -299,11 +299,13 @@ namespace cr {
                    const std::string& inputName, std::shared_ptr<dai::node::Camera> inputNode) {
             auto queue = getOutputQueue(xLinkOut, 4, false);
 
+            auto socket = dai::CameraBoardSocket::RGB;
+            auto cameraInfoManager = CameraInfoManager(socket, 0, 0);
             make_publisher<ImagePublisher>(
                     queue,
                     getNodeHandle(inputNode->getBoardSocket()),
                     30,
-                    nullptr,
+                    cameraInfoManager,
                     xLinkOut);
 
             return true;
@@ -554,6 +556,9 @@ namespace cr {
                 _cameraManagers[socket] = manager = DepthaiCameraInfoManager::get(_device, _calibrationHandler, socket, getNodeHandle(socket), cname,
                                                                                   "flash:///", width, height, topLeftPixelId, bottomRightPixelId);
             }
+            if(manager->width == 0) manager->width = width;
+            if(manager->height == 0) manager->height = height;
+
             return manager;
         }
 
