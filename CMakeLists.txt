@@ -11,7 +11,7 @@ if(BUILD_DEPTHAI)
     FetchContent_Declare(
             depthai-core
             GIT_REPOSITORY https://github.com/constructiverealities/depthai.git
-                GIT_TAG 1281dc90cb35b3d67cf45a0233d6352194d216eb
+                GIT_TAG dd2309901c6463c93b9729fe98507357797c6d74
     )
 
     FetchContent_MakeAvailable(depthai-core)

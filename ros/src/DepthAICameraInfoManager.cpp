@@ -277,6 +277,11 @@ DepthaiCameraInfoManager::saveCalibrationFlash(const ros_impl::sensor_msgs::Came
     return saveAllCalibrationData(nh_, device, calibrationHandler);
 }
 
+void DepthaiCameraInfoManager::setSize(int width, int height) {
+    if(width > 0) this->width = width;
+    if(height > 0) this->height = height;
+    loadCalibrationFlash("", this->cname());
+}
 bool DepthaiCameraInfoManager::loadCalibrationFlash(const std::string &flashURL, const std::string &cname) {
     auto saveData = calibrationHandler.getEepromData();
     auto camera_data = saveData.cameraData[socket];

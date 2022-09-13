@@ -300,7 +300,7 @@ namespace cr {
             auto queue = getOutputQueue(xLinkOut, 4, false);
 
             auto socket = dai::CameraBoardSocket::RGB;
-            auto cameraInfoManager = CameraInfoManager(socket, 0, 0);
+            auto cameraInfoManager = CameraInfoManager(socket, -1, -1);
             make_publisher<ImagePublisher>(
                     queue,
                     getNodeHandle(inputNode->getBoardSocket()),
@@ -556,8 +556,7 @@ namespace cr {
                 _cameraManagers[socket] = manager = DepthaiCameraInfoManager::get(_device, _calibrationHandler, socket, getNodeHandle(socket), cname,
                                                                                   "flash:///", width, height, topLeftPixelId, bottomRightPixelId);
             }
-            if(manager->width == 0) manager->width = width;
-            if(manager->height == 0) manager->height = height;
+            manager->setSize(width, height);
 
             return manager;
         }

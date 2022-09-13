@@ -28,11 +28,10 @@ protected:
                              const std::string &cname="camera", const std::string &url="flash:///", int width = -1, int height = -1,
                              dai::Point2f topLeftPixelId = { },
                              dai::Point2f bottomRightPixelId = { });
-
+   int width; int height;
 public:
     ros_impl::sensor_msgs::CameraInfo getCameraInfo(void) override;
-    int width; int height;
-
+    void setSize(int width, int height);
 public:
     ros_impl::sensor_msgs::CameraInfo getCameraInfo(bool isRectified);
     dai::Device &Device() { return *device; }
