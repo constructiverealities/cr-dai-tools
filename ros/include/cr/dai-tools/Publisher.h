@@ -55,6 +55,23 @@ namespace cr {
                     perf_start = now;
                 }
             }
+
+            ros_impl::Time ros_time(const dai::Timestamp& ts) {
+                return ros_time(ts.get());
+            }
+
+            ros_impl::Time ros_time(const std::chrono::time_point<std::chrono::steady_clock, std::chrono::steady_clock::duration>& tstamp) {
+                auto rosNow = ros_impl::now(_nh);
+                auto steadyTime = std::chrono::steady_clock::now();
+                auto diffTime = steadyTime - tstamp;
+#ifdef HAS_ROS2
+                int64_t nsec = rosNow.seconds() - diffTime.count();//rosNow.toNSec() - diffTime.count();
+#else
+                int64_t nsec = rosNow.toNSec() - diffTime.count();
+#endif
+                return ros_impl::Time(nsec / 1000000000, nsec % 1000000000);
+            }
+
         public:
             Publisher_(std::shared_ptr<dai::DataOutputQueue> daiMessageQueue,
                            const ros_impl::Node& nh,

@@ -6,15 +6,17 @@ namespace cr {
     class IMUPublisher : public Publisher_<dai::IMUData, ros_impl::sensor_msgs::Imu> {
     protected:
         tf2_ros::TransformBroadcaster broadcaster;
-        ros_impl::geometry_msgs::TransformStamped imu2refcam;
         dai::CalibrationHandler& calibrationHandler;
-        std::string referenceCamera;
+        double publish_rate = 1./30.;
+        double last_publish = 0;
+
+        std::string deviceName;
 
         void operator()(std::shared_ptr<dai::IMUData> msg) override;
-
+        std::string frame();
         public:
             IMUPublisher(const std::shared_ptr<dai::DataOutputQueue> &daiMessageQueue, const ros_impl::Node &nh,
-                         dai::CalibrationHandler& calibrationHandler, std::shared_ptr<dai::node::XLinkOut> xlinkOut, const std::string& ref_camera);
+                         dai::CalibrationHandler& calibrationHandler, std::shared_ptr<dai::node::XLinkOut> xlinkOut, const std::string& deviceName);
             void Setup() override;
         };
 

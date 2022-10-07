@@ -282,8 +282,7 @@ namespace cr {
         bool PipelinePublisher::Visit(SetupPublishers, std::shared_ptr<dai::node::XLinkOut> xLinkOut,
                    const std::string& inputName, std::shared_ptr<dai::node::IMU> inputNode) {
             auto queue = getOutputQueue(xLinkOut, 4, false);
-            auto ns = default_frame_mapping()[dai::CameraBoardSocket::CAM_A];
-            auto cname = "dai_" + mxId + "_" + ns;
+            auto cname = "dai_" + mxId;
 
             make_publisher<IMUPublisher>(
                     queue,

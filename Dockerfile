@@ -19,7 +19,7 @@ RUN apt update && apt-get install --no-install-recommends -y \
     ros-std-msgs \
     libyaml-dev \
     libyaml-cpp-dev git cmake \
-    python3-dynamic-reconfigure
+    python3-dynamic-reconfigure linux-perf linux-base
 
 RUN update-ca-certificates
 RUN mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts

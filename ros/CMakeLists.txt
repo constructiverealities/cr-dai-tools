@@ -53,7 +53,9 @@ elseif(catkin_FOUND)
         LIST(APPEND ROS_LIBRARIES ${${d}_LIBRARIES})
     endforeach()
 
-    set(CATKIN_WORKSPACES "$ENV{ROS_PATH}")
+    if($ENV{ROS_PATH})
+        set(CATKIN_WORKSPACES "${CATKIN_WORKSPACES};$ENV{ROS_PATH}")
+    endif()
     string(REPLACE "\\" "/" CATKIN_WORKSPACES "${CATKIN_WORKSPACES}")
 
     add_message_files (

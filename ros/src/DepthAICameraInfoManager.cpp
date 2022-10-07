@@ -132,22 +132,34 @@ static void transmit_eeprom(const ros_impl::Node& n, const std::shared_ptr<dai::
 
 //        if(manager->Device().getMxId() != device.getMxId())
 //            continue;
+        auto this_socket = kv.second->Socket();
+        auto this_name = kv.second->cname();
+        if(this_socket == dai::CameraBoardSocket::CAM_A) {
+            auto imu_frame = "dai_" + manager->Device().getMxId() + "_imu";
+            try {
+                auto extrinsics = calibrationData.getImuToCameraExtrinsics(dai::CameraBoardSocket::CAM_A, true);
+                auto imu2refcam = cr::dai_tools::tx::daiExtrinsics2Tx(extrinsics, imu_frame, this_name);
+                imu2refcam.header.stamp = ros_impl::now(n);
+                device_transforms[imu2refcam.child_frame_id] = imu2refcam;
+            } catch(std::exception& e) {
+                ROS_IMPL_WARN(nh, "Cant find extrinsics for IMU and %d", (int)dai::CameraBoardSocket::CAM_A);
+            }
+        }
 
         auto next_socket = get_next_populated_socket(device, kv.second->Socket());
         auto daiInfo = DepthaiCameraInfoManager::get(device, next_socket);
         if(!daiInfo)
             continue;
-        auto cname = daiInfo->cname();
+        auto next_name = daiInfo->cname();
         try {
-            auto extrinsics = calibrationData.getCameraExtrinsics( next_socket, kv.second->Socket());
-            auto pose_msg = cr::dai_tools::tx::daiExtrinsics2Tx(extrinsics, cname, kv.second->cname());
+            auto extrinsics = calibrationData.getCameraExtrinsics( next_socket, this_socket);
+            auto pose_msg = cr::dai_tools::tx::daiExtrinsics2Tx(extrinsics, next_name, kv.second->cname());
             pose_msg.header.stamp = ros_impl::now(n);
 
             device_transforms[pose_msg.child_frame_id] = pose_msg;
-            //tfBroadcaster().sendTransform(pose_msg);
-            ROS_IMPL_INFO(n, "Broadcast tx between %s and %s", cname.c_str(), kv.second->cname().c_str());
+            ROS_IMPL_INFO(n, "Broadcast tx between %s and %s", next_name.c_str(), kv.second->cname().c_str());
         } catch(std::runtime_error& e) {
-            ROS_IMPL_WARN(n, "Could not broadcast tx between %s and %s, %s", cname.c_str(), kv.second->cname().c_str(), e.what());
+            ROS_IMPL_WARN(n, "Could not broadcast tx between %s and %s, %s", next_name.c_str(), kv.second->cname().c_str(), e.what());
         }
     }
 }
@@ -195,17 +207,46 @@ bool saveAllCalibrationData(const ros_impl::Node& n, const std::shared_ptr<dai::
         D.resize(14);
         calibrationHandler.setDistortionCoefficients(socket, D);
 
+        auto thisFrame = new_info.header.frame_id;
+        auto imu_frame = "dai_" + manager->Device().getMxId() + "_imu";
+
+        auto lookupTime = ros_impl::Time(0);
+        //auto lookupTime = ros_impl::now(n);
+        std::string error_msg;
+        if(buffer(n).canTransform(imu_frame, thisFrame, lookupTime), &error_msg) {
+            auto imu2cam = buffer(n).lookupTransform(thisFrame, imu_frame, lookupTime);
+            tf2::Matrix3x3 rot;
+            rot.setRotation(tf2::Quaternion(imu2cam.transform.rotation.x,
+                                            imu2cam.transform.rotation.y,
+                                            imu2cam.transform.rotation.z,
+                                            imu2cam.transform.rotation.w));
+            std::vector<std::vector<float>> dai_rot_imu2cam;
+            std::vector<float> translation = {(float)imu2cam.transform.translation.x * 100.f,
+                                              (float)imu2cam.transform.translation.y * 100.f,
+                                              (float)imu2cam.transform.translation.z * 100.f};
+
+            ROS_IMPL_INFO(n, "Saving extrinsics between %s and %s [%f %f %f] [%f %f %f %f]", cname.c_str(), imu_frame.c_str(),
+                          translation[0], translation[1], translation[2], imu2cam.transform.rotation.x,
+                          imu2cam.transform.rotation.y, imu2cam.transform.rotation.z, imu2cam.transform.rotation.w);
+            copy(dai_rot_imu2cam, rot);
+            calibrationHandler.setImuExtrinsics(socket, dai_rot_imu2cam, translation, translation);
+        } else {
+            ROS_IMPL_WARN(n, "Could not find transform between %s and %s (%s)", imu_frame.c_str(), thisFrame.c_str(), error_msg.c_str());
+            return false;
+        }
+
+
         if(auto daiInfo = DepthaiCameraInfoManager::get(device, next_socket)) {
             auto ci = daiInfo->getCameraInfo();
             auto thisFrame = new_info.header.frame_id;
             auto nextFrame = ci.header.frame_id;
             assert(thisFrame != "" && nextFrame != "");
-            std::string error_msg;
 
             auto lookupTime = ros_impl::Time(0);
+
             /// NOTE: lookupTransform is target, source. setCameraExtrinsics is source, target.
             if(buffer(n).canTransform(nextFrame, thisFrame, lookupTime), &error_msg) {
-                auto tx = buffer(n).lookupTransform(thisFrame, nextFrame, lookupTime);
+                auto tx = buffer(n).lookupTransform(nextFrame, thisFrame, lookupTime);
                 tf2::Matrix3x3 rot;
                 rot.setRotation(tf2::Quaternion(tx.transform.rotation.x,
                                                tx.transform.rotation.y,
@@ -240,7 +281,7 @@ bool saveAllCalibrationData(const ros_impl::Node& n, const std::shared_ptr<dai::
         //transmit_eeprom(n, device, calibrationHandler);
         return device->flashCalibration(calibrationHandler);
     } catch(std::runtime_error& e) {
-        ROS_IMPL_WARN(n, "%s", e.what());
+        ROS_IMPL_WARN(n, "Error flashing calibration: %s", e.what());
         return false;
     }
 }
@@ -249,7 +290,8 @@ static bool transmit_transforms = true;
 void DepthaiCameraInfoManager::spin() {
     if(transmit_transforms) {
         for(auto& kv : device_transforms) {
-            kv.second.header.stamp = ros_impl::now(nh_);
+            auto time = ros_impl::now(nh_);
+            kv.second.header.stamp = ros_impl::Time().fromSec(time.toSec() + .15);
             broadcaster.sendTransform(kv.second);
         }
     }

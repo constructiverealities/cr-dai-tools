@@ -101,16 +101,7 @@ cr::dai_rosnode::ImagePublisher::ImagePublisher(std::shared_ptr<dai::DataOutputQ
 
 void cr::dai_rosnode::ImagePublisher::operator()(std::shared_ptr<dai::ImgFrame> inFrame) {
     try {
-        auto tstamp = inFrame->getTimestamp();
-        auto rosNow = ros_impl::now(_nh);
-        auto steadyTime = std::chrono::steady_clock::now();
-        auto diffTime = steadyTime - tstamp;
-#ifdef HAS_ROS2
-        int64_t nsec = rosNow.seconds() - diffTime.count();//rosNow.toNSec() - diffTime.count();
-#else
-        int64_t nsec = rosNow.toNSec() - diffTime.count();
-#endif
-        auto rosStamp = ros_impl::Time(nsec / 1000000000, nsec % 1000000000);
+        auto rosStamp = ros_time(inFrame->getTimestamp());
 
         ros_impl::std_msgs::Header header;
 
@@ -149,8 +140,8 @@ void cr::dai_rosnode::ImagePublisher::operator()(std::shared_ptr<dai::ImgFrame> 
 #endif
         //ROS_WARN("Stop %s", Name().c_str());
 
-        auto now = dai::Clock::now();// std::chrono::high_resolution_clock::now();
-        auto ms_since = std::chrono::duration_cast<std::chrono::microseconds>(now - tstamp).count() / 1000.;
+        auto now = ros_impl::now(_nh);
+        auto ms_since = (now.toSec() - rosStamp.toSec()) * 1000.0;
         perf_latency += ms_since;
 
         Publisher_::operator()(inFrame);
