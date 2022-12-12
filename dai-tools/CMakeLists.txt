@@ -64,6 +64,9 @@ install(TARGETS cr-dai-tools
         LIBRARY DESTINATION lib
         PUBLIC_HEADER DESTINATION include)
 
+INSTALL (DIRECTORY ${CMAKE_SOURCE_DIR}/dai-tools/include/
+        DESTINATION include
+        FILES_MATCHING PATTERN "*.h*")
 
 find_package(OpenCV COMPONENTS core highgui imgproc imgcodecs videoio)
 if(OpenCV_FOUND)
