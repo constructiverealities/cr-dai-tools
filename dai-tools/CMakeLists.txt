@@ -29,7 +29,7 @@ if(NOT TARGET yaml-cpp)
           GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
           GIT_TAG yaml-cpp-0.7.0
   )
-  option(YAML_BUILD_SHARED_LIBS "Build yaml-cpp shared library" OFF)
+  option(YAML_BUILD_SHARED_LIBS "Build yaml-cpp shared library" ON)
   FetchContent_MakeAvailable(yaml-cpp)
 
   set(YAML_CPP_LIBRARIES yaml-cpp)
@@ -37,7 +37,7 @@ endif()
 
 include_directories(${YAML_CPP_INCLUDE_DIR})
 
-add_library(cr-dai-tools STATIC src/cr-dai-tools.cc src/PipelineBuilder.cc src/DepthToXYZ.cc src/DeviceMetaInfo.cc)
+add_library(cr-dai-tools SHARED src/cr-dai-tools.cc src/PipelineBuilder.cc src/DepthToXYZ.cc src/DeviceMetaInfo.cc)
 target_link_libraries(cr-dai-tools depthai::core ${YAML_CPP_LIBRARIES})
  
 target_include_directories(cr-dai-tools PUBLIC include ${depthai_INCLUDE_DIRS})
