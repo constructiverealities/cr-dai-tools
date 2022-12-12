@@ -60,7 +60,7 @@ if(Boost_FOUND)
   install(TARGETS depthai-daemon DESTINATION bin)
 endif()
 
-install(TARGETS cr-dai-tools
+install(TARGETS cr-dai-tools ${YAML_CPP_LIBRARIES}
         LIBRARY DESTINATION lib
         PUBLIC_HEADER DESTINATION include)
 
