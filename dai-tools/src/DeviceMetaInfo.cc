@@ -163,14 +163,17 @@ namespace cr {
                 out << YAML::EndSeq;
             }
             out << YAML::EndMap;
-
             auto fn = SaveFileName();
-            std::cerr << "Saving metadata file to " << fn << std::endl;
-            std::ofstream fs(SaveFileName());
-            fs << out.c_str() << std::endl;
-            fs.close();
-            if(!fs) {
-                std::cerr << "Warning: Writing metadata file to " << fn << " failed" << std::endl;
+            try {
+                std::cerr << "Saving metadata file to " << fn << std::endl;
+                std::ofstream fs(SaveFileName());
+                fs << out.c_str() << std::endl;
+                fs.close();
+                if (!fs) {
+                    std::cerr << "Warning: Writing metadata file to " << fn << " failed" << std::endl;
+                }
+            } catch(const std::exception& e) {
+                std::cerr << "Warning: Writing metadata file to " << fn << " failed" << e.what() << std::endl;
             }
         }
         void DeviceMetaInfo::Load() {
