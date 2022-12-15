@@ -74,5 +74,6 @@ USER 1000:1000
 
 ENV LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
 ENV ROS_LOAD_DISTRO=noetic
+ENV LD_LIBRARY_PATH=/opt/ros/noetic/bin:/opt/ros/noetic/lib
 #ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/opt/ros/noetic/bin/autonode"]

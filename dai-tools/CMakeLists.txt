@@ -24,14 +24,14 @@ message("Has CR Fork: ${HAVE_CR_FORK}")
 if(NOT TARGET yaml-cpp)
   include(FetchContent)
   MESSAGE("Getting yaml")
+  set(YAML_BUILD_SHARED_LIBS ON CACHE INTERNAL "")
   FetchContent_Declare(
           yaml-cpp
           GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
           GIT_TAG yaml-cpp-0.7.0
   )
-  option(YAML_BUILD_SHARED_LIBS "Build yaml-cpp shared library" ON)
-  FetchContent_MakeAvailable(yaml-cpp)
 
+  FetchContent_MakeAvailable(yaml-cpp)
   set(YAML_CPP_LIBRARIES yaml-cpp)
 endif()
 
@@ -61,7 +61,7 @@ if(Boost_FOUND)
 endif()
 
 install(TARGETS cr-dai-tools ${YAML_CPP_LIBRARIES}
-        LIBRARY DESTINATION lib
+        LIBRARY DESTINATION bin
         PUBLIC_HEADER DESTINATION include)
 
 INSTALL (DIRECTORY ${CMAKE_SOURCE_DIR}/dai-tools/include/
