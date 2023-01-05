@@ -8,13 +8,18 @@ option(BUILD_DEPTHAI "Build all relevant dependencies" ${ROS_BUILD})
 include(FetchContent)
 if(BUILD_DEPTHAI)
     MESSAGE("Building depthai locally...")
+    SET(DEPTHAI_OPENCV_SUPPORT ON CACHE INTERNAL BOOL "")
+    SET(DEPTHAI_BUILD_EXAMPLES OFF CACHE INTERNAL BOOL "")
+    set(BUILD_SHARED_LIBS ON CACHE INTERNAL "Build SHARED libraries" FORCE)
+
     FetchContent_Declare(
             depthai-core
             GIT_REPOSITORY https://github.com/constructiverealities/depthai.git
-                GIT_TAG dd2309901c6463c93b9729fe98507357797c6d74
+                GIT_TAG ee23b71f691a59e3b8f75276da6ceac9f1d7fddb
     )
 
     FetchContent_MakeAvailable(depthai-core)
+
     project(cr-dai-tools)
 else()
     project(cr-dai-tools)

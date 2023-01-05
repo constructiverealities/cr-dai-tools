@@ -14,22 +14,25 @@
 
 namespace cr {
     namespace dai_tools {
-
-        void DeviceRunner::Run() {
+        void DeviceRunner::Start() {
             device->startPipeline(*Pipeline());
+        }
+        void DeviceRunner::Run() {
+            Start();
 
             std::map<std::string, std::shared_ptr<dai::DataOutputQueue>> outputQueues;
             for(auto& n : device->getOutputQueueNames()) {
-                outputQueues[n] = device->getOutputQueue(n, 4, false);
+                outputQueues[n] = device->getOutputQueue(n, 2, true);
             }
 
             auto start = std::chrono::high_resolution_clock::now();
             while(ShouldKeepRunning()) {
-                auto event = device->getQueueEvent(std::chrono::milliseconds(100));
+                auto event = device->getQueueEvent(std::chrono::milliseconds(get_timeout_ms));
                 if(auto& queue = outputQueues[event]) {
-                    while(auto msg = queue->tryGet()) {
+                    if(auto msg = queue->tryGet()) {
                         OnStreamData(event, msg);
                     }
+                    queue->setBlocking(false);
                 }
 
                 auto now = std::chrono::high_resolution_clock::now();

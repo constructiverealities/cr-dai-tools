@@ -16,6 +16,7 @@ namespace cr {
             std::shared_ptr<dai::Pipeline> pipeline;
             std::shared_ptr<dai::Device> device;
             std::map<std::string, OutputPerformanceCounter> performance_counters;
+            uint32_t get_timeout_ms = 100;
         public:
             virtual ~DeviceRunner() = default;
             explicit DeviceRunner(std::shared_ptr<dai::Device> device) : device(std::move(device)) {}
@@ -23,6 +24,7 @@ namespace cr {
 
             virtual bool ShouldKeepRunning();
             virtual void Run();
+            virtual void Start();
             virtual void SetupPipeline() = 0;
 
             virtual std::shared_ptr<dai::Pipeline> Pipeline();
