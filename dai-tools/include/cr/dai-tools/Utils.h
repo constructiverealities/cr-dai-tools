@@ -1,3 +1,5 @@
+#pragma once
+
 #include <depthai/depthai.hpp>
 
 namespace cr {

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <depthai/pipeline/nodes.hpp>
 #include <depthai/pipeline/Pipeline.hpp>
 #include <depthai/pipeline/datatype/NNData.hpp>
