@@ -17,12 +17,15 @@ namespace cr {
         protected:
             std::shared_ptr<dai::Pipeline> pipeline;
             std::shared_ptr<dai::Device> device;
+
             std::map<std::string, OutputPerformanceCounter> performance_counters;
             uint32_t get_timeout_ms = 100;
         public:
+            dai::CalibrationHandler calibration;
+
             virtual ~DeviceRunner() = default;
             explicit DeviceRunner(std::shared_ptr<dai::Device> device) : device(std::move(device)) {}
-            DeviceRunner() : device(std::make_unique<dai::Device>()) {}
+            DeviceRunner();
 
             virtual bool ShouldKeepRunning();
             virtual void Run();

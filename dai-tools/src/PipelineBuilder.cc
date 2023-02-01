@@ -192,7 +192,7 @@ namespace cr {
             if(!pipeline)
                 pipeline = std::make_shared<dai::Pipeline>();
 
-            auto calibrationData = device->readCalibration();
+            calibrationData = device->readCalibration();
             auto eeprom = calibrationData.getEepromData();
 
             bool useImuDefault = eeprom.imuExtrinsics.rotationMatrix.size() != 0 && eeprom.imuExtrinsics.toCameraSocket != dai::CameraBoardSocket::AUTO;

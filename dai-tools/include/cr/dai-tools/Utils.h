@@ -4,6 +4,7 @@
 
 namespace cr {
     namespace dai_tools {
+        std::array<float, 16> daiExtrinsics2mat4(const std::vector<std::vector<float>>& extrinsics, bool column_major=true);
 
         std::vector<
                 std::tuple<

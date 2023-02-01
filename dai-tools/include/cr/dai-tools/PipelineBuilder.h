@@ -10,6 +10,7 @@ namespace cr {
     namespace dai_tools {
         class PipelineBuilder {
         protected:
+            dai::CalibrationHandler calibrationData;
             std::shared_ptr<dai::Pipeline> pipeline;
             std::shared_ptr<dai::Device> device;
             std::shared_ptr<dai::node::StereoDepth> stereo_depth_node;

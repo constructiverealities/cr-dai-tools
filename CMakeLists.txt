@@ -8,8 +8,7 @@ option(BUILD_DEPTHAI "Build all relevant dependencies" ${ROS_BUILD})
 include(FetchContent)
 if(BUILD_DEPTHAI)
     MESSAGE("Building depthai locally...")
-    SET(DEPTHAI_OPENCV_SUPPORT ON CACHE INTERNAL BOOL "")
-    SET(DEPTHAI_BUILD_EXAMPLES OFF CACHE INTERNAL BOOL "")
+    #SET(DEPTHAI_OPENCV_SUPPORT ON)
     set(BUILD_SHARED_LIBS ON CACHE INTERNAL "Build SHARED libraries" FORCE)
 
     FetchContent_Declare(
@@ -30,8 +29,10 @@ set(CMAKE_CXX_STANDARD 17)
 
 if(NOT ROS_BUILD)
     add_subdirectory(dai-tools)
+else()
+    add_subdirectory(ros)
 endif()
-add_subdirectory(ros)
+
 
 if(NOT ROS_BUILD)
     add_executable(cr-dai-example ./apps/example.cc)
