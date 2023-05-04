@@ -90,7 +90,7 @@ namespace cr {
             return SensorResolution::THE_400_P;
         }
 
-        static std::string GetSaveDir() {
+        std::string GetSaveDir() {
             const char* home = getenv("XDG_CONFIG_HOME");
             if(home && home[0]) return home;
 

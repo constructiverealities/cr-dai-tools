@@ -104,6 +104,17 @@ namespace cr {
             return sensorMetaInfo.FPS;
         }
 
+        std::string ToFCacheFileName(std::shared_ptr<dai::Device> device) {
+            auto fn = "dai_" + device->getMxId() + ".tof.calib";
+            auto saveDir = GetSaveDir() + "/cr-dai-tools/calibrations.d/";
+            try {
+                std::filesystem::create_directories(saveDir);
+            } catch(std::filesystem::filesystem_error& e) {
+                std::cerr << "Warning: Could not create cache directory: " << e.what() << std::endl;
+            }
+            return saveDir + fn;
+        }
+
         void PipelineBuilder::HandleToF(const CameraFeatures &features) {
 #if HAS_CR_FORK
             if(metaInfo.SensorInfo.find(features.socket) == metaInfo.SensorInfo.end()) {
@@ -123,6 +134,14 @@ namespace cr {
                 tof->setFilterConfig(tof_filter_config);
             }
             tof->initialConfig.get().useLoadedFilter = 1;
+
+            auto calibration_path = ToFCacheFileName(device);
+            if(auto calibration_path_file = std::ifstream(calibration_path, std::ios::binary | std::ios::ate)) {
+                auto size = calibration_path_file.tellg();
+                calibration_path_file.seekg(0);
+                tof->properties.tof_calibration.resize(size);
+                calibration_path_file.read(reinterpret_cast<char *>(tof->properties.tof_calibration.data()), size);
+            }
 
             using output_t = decltype(&tof->out);
             std::list<std::pair<std::string, output_t>> outs = {

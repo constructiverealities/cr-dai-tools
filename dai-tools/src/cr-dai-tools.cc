@@ -16,25 +16,31 @@ namespace cr {
     namespace dai_tools {
         void DeviceRunner::Start() {
             device->startPipeline(*Pipeline());
+
+            for(auto& n : device->getOutputQueueNames()) {
+                outputQueues[n] = device->getOutputQueue(n, 10, true);
+            }
+        }
+        bool DeviceRunner::Poll() {
+            if(!ShouldKeepRunning())
+                return false;
+
+            auto event = device->getQueueEvent(std::chrono::milliseconds(get_timeout_ms));
+            if(auto& queue = outputQueues[event]) {
+                if(auto msg = queue->tryGet()) {
+                    OnStreamData(event, msg);
+                }
+                queue->setMaxSize(1);
+                queue->setBlocking(false);
+            }
+
+            return true;
         }
         void DeviceRunner::Run() {
             Start();
 
-            std::map<std::string, std::shared_ptr<dai::DataOutputQueue>> outputQueues;
-            for(auto& n : device->getOutputQueueNames()) {
-                outputQueues[n] = device->getOutputQueue(n, 2, true);
-            }
-
             auto start = std::chrono::high_resolution_clock::now();
-            while(ShouldKeepRunning()) {
-                auto event = device->getQueueEvent(std::chrono::milliseconds(get_timeout_ms));
-                if(auto& queue = outputQueues[event]) {
-                    if(auto msg = queue->tryGet()) {
-                        OnStreamData(event, msg);
-                    }
-                    queue->setBlocking(false);
-                }
-
+            while(Poll()) {
                 auto now = std::chrono::high_resolution_clock::now();
                 if (now - start > std::chrono::seconds(3)) {
                     for (auto& kv : performance_counters) {
@@ -47,6 +53,7 @@ namespace cr {
                     start = now;
                 }
             }
+
         }
 
         bool DeviceRunner::ShouldKeepRunning() {
@@ -79,8 +86,19 @@ namespace cr {
             auto now = dai::Clock::now();// std::chrono::high_resolution_clock::now();
             return std::chrono::duration_cast<std::chrono::microseconds>(now - tp).count() / 1000.;
         }
-        void DeviceRunner::OnStreamData(const std::string &stream_name, std::shared_ptr<dai::ImgFrame> img) {
-            performance_counters[stream_name].latency += ms_since(img->getTimestamp());
+        void DeviceRunner::OnStreamData(const std::string &event, std::shared_ptr<dai::ImgFrame> img) {
+            performance_counters[event].latency += ms_since(img->getTimestamp());
+
+            bool isDepth = event.find("depth") != std::string::npos;
+            bool isCalib = img->getWidth() == 1 || img->getWidth() == 1;
+
+            if(isDepth && isCalib) {
+                auto filename = cr::dai_tools::ToFCacheFileName(device);
+
+                if(auto calibration_path_file = std::ofstream(cr::dai_tools::ToFCacheFileName(device), std::ios::binary)) {
+                    calibration_path_file.write(reinterpret_cast<const char *>(img->getData().data()), img->getData().size());
+                }
+            }
         }
 
         void DeviceRunner::OnStreamData(const std::string &stream_name, std::shared_ptr<dai::IMUData> img) {
@@ -119,6 +137,39 @@ namespace cr {
             }
 
             return mat4;
+        }
+
+        std::vector<
+                std::tuple<
+                        std::shared_ptr<dai::node::XLinkOut>,
+                        std::string,
+                        std::shared_ptr<dai::Node>
+                >
+        > GetXLinkOuts(dai::Pipeline &pipeline) {
+            std::vector<
+                    std::tuple<
+                            std::shared_ptr<dai::node::XLinkOut>,
+                            std::string,
+                            std::shared_ptr<dai::Node>
+                    >
+            > rtn;
+
+            auto connections = pipeline.getConnectionMap();
+            for (auto &connection: connections) {
+                auto node = pipeline.getNode(connection.first);
+                if (auto xlinkOut = std::dynamic_pointer_cast<dai::node::XLinkOut>(node)) {
+                    for (auto &nodeConnection: connection.second) {
+                        auto otherNode = pipeline.getNode(nodeConnection.outputId);
+
+                        rtn.emplace_back(xlinkOut, nodeConnection.outputName, otherNode);
+//                bool handled = StartVisit(SetupPublishers(), xlinkOut, nodeConnection.outputName, otherNode);
+//                if(!handled) {
+//                    ROS_IMPL_WARN(_device_node, "Could not map xlinkout named %s", nodeConnection.outputName.c_str());
+//                }
+                    }
+                }
+            }
+            return rtn;
         }
 
     }

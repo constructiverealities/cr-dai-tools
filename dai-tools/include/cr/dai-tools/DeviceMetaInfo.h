@@ -6,6 +6,8 @@
 
 namespace cr {
     namespace dai_tools {
+        std::string GetSaveDir();
+
         enum CameraOrientation {
             Rotate0 = 0,
             Rotate90,

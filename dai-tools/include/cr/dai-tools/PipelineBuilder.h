@@ -8,6 +8,8 @@
 
 namespace cr {
     namespace dai_tools {
+        std::string ToFCacheFileName(std::shared_ptr<dai::Device> device);
+
         class PipelineBuilder {
         protected:
             dai::CalibrationHandler calibrationData;
