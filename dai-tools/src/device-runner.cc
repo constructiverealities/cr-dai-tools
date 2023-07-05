@@ -10,9 +10,9 @@ namespace cr {
                 outputQueues[n] = device->getOutputQueue(n, 10, true);
             }
         }
-        bool DeviceRunner::Poll() {
+        int32_t DeviceRunner::Poll() {
             if(!ShouldKeepRunning())
-                return false;
+                return -1;
 
             auto event = device->getQueueEvent(std::chrono::milliseconds(get_timeout_ms));
             if(auto& queue = outputQueues[event]) {
@@ -23,7 +23,7 @@ namespace cr {
                 queue->setBlocking(false);
             }
 
-            return true;
+            return 1;
         }
         void DeviceRunner::Run() {
             Start();

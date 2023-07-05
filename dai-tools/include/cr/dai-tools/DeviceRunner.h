@@ -30,7 +30,7 @@ namespace cr {
 
             virtual bool ShouldKeepRunning();
             virtual void Run();
-            virtual bool Poll();
+            virtual int32_t Poll();
             virtual void Start();
             virtual void SetupPipeline() = 0;
 
